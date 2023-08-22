@@ -24,7 +24,7 @@ from habitat.core.utils import center_crop, try_cv2_import
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
-from unreal_link import UnrealLink
+from habitat.sims.unreal.unreal_link import UnrealLink
 
 
 cv2 = try_cv2_import()
@@ -216,7 +216,7 @@ class UnrealSimulator(Simulator):
         try:
             for k, v in self._config.items():
                 response = await self.client.send_packet(f"{k} {v}")
-                if response is not "OK":
+                if response != "OK":
                     raise IncompatibleSetting
         except IncompatibleSetting:
             print(f"Couldn't register setting {k} with value {v}")
