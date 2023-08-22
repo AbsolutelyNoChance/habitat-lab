@@ -34,7 +34,7 @@ class ObservationsSingleton(metaclass=Singleton):
         self.buffers_to_get = buffers
 
     def parse_buffers(self, obj):
-        buffers = {}
+        self.buffers = {}
         for key, value in obj.items():
             print(f"Got buffer {key}")
             image = base64.b64decode(value)
@@ -43,7 +43,7 @@ class ObservationsSingleton(metaclass=Singleton):
             f.write(image)
             f.close()
 
-            buffers[key] = np.asarray(image)
+            self.buffers[key] = np.asarray(image)
 
         print(f"Got observations: {', '.join([k for k in obj.keys()])}")
 
