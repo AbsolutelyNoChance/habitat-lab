@@ -18,6 +18,7 @@ from habitat.core.simulator import (
     RGBSensor,
     SensorSuite,
     Simulator,
+    AgentState,
 )
 
 from habitat.core.dataset import Episode
@@ -333,9 +334,9 @@ class UnrealSimulator(Simulator):
             self.__class__.__name__
         )
 
-        state = {}
-        state["position"] = [0, 0, 0]
-        state["rotation"] = [0, 0, 0]
+        state = AgentState()
+        state.position = [0, 0, 0]
+        state.rotation = [0, 0, 0]
         # TODO implement, this is just a temporary fix
 
         return state
