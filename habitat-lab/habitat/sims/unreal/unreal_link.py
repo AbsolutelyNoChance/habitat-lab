@@ -49,7 +49,7 @@ class UnrealLink:
 
     async def execute_action(self, action_name):
         # TODO error check? make new json field to detect errors or stop?
-        observation = self.__send_packet(f"action {action_name}")
+        observation = await self.__send_packet(f"action {action_name}")
 
         # Testing if it's a json... yeah
         if observation[0] == "{":
@@ -58,7 +58,7 @@ class UnrealLink:
 
     async def capture_observation(self):
         # TODO error check? make new json field to detect errors or stop?
-        observation = self.__send_packet("capture")
+        observation = await self.__send_packet("capture")
 
         # Testing if it's a json... yeah
         if observation[0] == "{":
