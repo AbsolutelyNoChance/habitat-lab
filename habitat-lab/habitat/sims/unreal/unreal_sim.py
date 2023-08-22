@@ -213,8 +213,9 @@ class UnrealSimulator(Simulator):
             print(f"unknown setting given to initializer ({k})")
 
         self.client = UnrealLink()  # TODO specify IP to reach home
+        self.client.connect_server()
 
-        async def submit_settings(self):
+        async def submit_settings(self: UnrealSimulator):
             try:
                 for k, v in self._config.items():
                     response = await self.client.send_packet(f"{k} {v}")
