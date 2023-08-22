@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 from habitat.sims.unreal.unreal_link import UnrealLink
 
-from habitat.sims.unreal.observations import ObservationsSingleton
+from habitat.sims.unreal.observations import Observations
 
 import asyncio
 
@@ -83,7 +83,7 @@ class UnrealRGBSensor(RGBSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted RGB sensor observation? {self}")
-        return ObservationsSingleton.buffers[self.unreal_buffer_name]
+        return Observations[self.unreal_buffer_name]
         """obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -124,7 +124,7 @@ class UnrealDepthSensor(DepthSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted Depth sensor observation? {self}")
-        return ObservationsSingleton.buffers[self.unreal_buffer_name]
+        return Observations[self.unreal_buffer_name]
         """
         obs = robot_obs.get(self.uuid, None)
 
@@ -167,7 +167,7 @@ class UnrealSemanticSensor(SemanticSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted Semantic sensor observation? {self}")
-        return ObservationsSingleton.buffers[self.unreal_buffer_name]
+        return Observations[self.unreal_buffer_name]
 
         """obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)

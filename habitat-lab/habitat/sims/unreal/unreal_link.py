@@ -4,7 +4,7 @@ import struct
 import json
 import base64
 
-from habitat.sims.unreal.observations import ObservationsSingleton
+from habitat.sims.unreal.observations import Observations
 
 
 class UnrealLink:
@@ -54,7 +54,7 @@ class UnrealLink:
         # Testing if it's a json... yeah
         if observation[0] == "{":
             obj = json.loads(observation)
-            ObservationsSingleton.parse_buffers(obj)
+            Observations.parse_buffers(obj)
 
     async def capture_observation(self):
         # TODO error check? make new json field to detect errors or stop?
@@ -63,7 +63,7 @@ class UnrealLink:
         # Testing if it's a json... yeah
         if observation[0] == "{":
             obj = json.loads(observation)
-            ObservationsSingleton.parse_buffers(obj)
+            Observations.parse_buffers(obj)
 
     async def submit_settings(self, config):
         try:
