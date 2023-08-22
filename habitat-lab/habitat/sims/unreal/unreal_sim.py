@@ -334,8 +334,8 @@ class UnrealSimulator(Simulator):
         )
 
         state = {}
-        state.position = [0, 0, 0]
-        state.rotation = [0, 0, 0]
+        state["position"] = [0, 0, 0]
+        state["rotation"] = [0, 0, 0]
         # TODO implement, this is just a temporary fix
 
         return state
