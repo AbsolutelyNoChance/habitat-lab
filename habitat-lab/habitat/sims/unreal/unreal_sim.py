@@ -201,6 +201,8 @@ class UnrealSimulator(Simulator):
         - Sensors to Capture == defined on each agent, RGBDS currently
         """
 
+        print(f"config: {config}")
+
         try:
             for k, v in config.items():
                 if k not in self._config:
@@ -228,11 +230,13 @@ class UnrealSimulator(Simulator):
         loop.run_until_complete(submit_settings(self))
 
         self.sensors = []
-        for s in self._config["capture_sensors"].split(","):
-            sensor_type = registry.get_sensor(s)
+        for sensor_cfg in self._config.sensors.values():
+            sensor_type = registry.get_sensor(sensor_cfg.type)
 
-            assert sensor_type is not None, "invalid sensor type {}".format(s)
-            self.sensors.append(sensor_type(s))
+            assert sensor_type is not None, "invalid sensor type {}".format(
+                sensor_cfg.type
+            )
+            self.sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(self.sensors)
 
         self._action_space = spaces.Discrete(
