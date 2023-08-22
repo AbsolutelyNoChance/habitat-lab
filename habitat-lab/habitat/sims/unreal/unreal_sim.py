@@ -21,6 +21,8 @@ from habitat.core.simulator import (
     AgentState,
 )
 
+import quaternion
+
 from habitat.core.dataset import Episode
 from habitat.core.utils import center_crop, try_cv2_import
 
@@ -334,7 +336,7 @@ class UnrealSimulator(Simulator):
             self.__class__.__name__
         )
 
-        state = AgentState([0, 0, 0], [0, 0, 0])
+        state = AgentState([0, 0, 0], quaternion.from_euler_angles([0, 0, 0]))
         # TODO implement, this is just a temporary fix
 
         return state
