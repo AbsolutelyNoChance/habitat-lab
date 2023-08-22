@@ -45,7 +45,7 @@ class ObservationsSingleton(metaclass=Singleton):
 
             buffers[key] = np.asarray(image)
 
-        print(f"Got observations: {', '.join([k for k in json.keys()])}")
+        print(f"Got observations: {', '.join([k for k in obj.keys()])}")
 
     def __getattr__(self, name):
         return self.buffers[name]
