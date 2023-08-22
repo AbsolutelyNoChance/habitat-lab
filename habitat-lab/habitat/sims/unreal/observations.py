@@ -33,9 +33,9 @@ class ObservationsSingleton(metaclass=Singleton):
         # TODO implement this
         self.buffers_to_get = buffers
 
-    def parse_buffers(self, json):
+    def parse_buffers(self, obj):
         buffers = {}
-        for key, value in json.items():
+        for key, value in obj.items():
             print(f"Got buffer {key}")
             image = base64.b64decode(value)
 
