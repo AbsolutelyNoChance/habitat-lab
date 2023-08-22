@@ -1,0 +1,26 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: pointnav
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    type: Unreal-Simulator-v0
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 640
+            height: 480
+            type: UnrealRGBSensor
+          depth_sensor:
+            width: 640
+            height: 480
+            type: UnrealDepthSensor
+    forward_step_size: 0.25
+    turn_angle: 15
