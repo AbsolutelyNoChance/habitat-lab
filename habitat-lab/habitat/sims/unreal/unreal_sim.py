@@ -191,15 +191,16 @@ class UnrealSimulator(Simulator):
 
     def __init__(self, config: "DictConfig") -> None:
         """TODO CONFIG:
-        - Character Height
-        - Max Slope
-        - Max Step Height
-        - Max Danger Distance
-        - Turn Amount?
-        - Move Amount?
-        - Capture Resolution 640x480
-        - Sensors to Capture
+        - Character Height == agent.height
+        - Max Slope == UnrealConfig TODO define unit
+        - Max Step Height == UnrealConfig TODO define unit
+        - Max Danger Distance == agent.radius
+        - Turn Amount? == SimulatorCOnfig.turn_angle in degrees
+        - Move Amount? == SimulatorConfig.forward_step_size in metres
+        - Capture Resolution 640x480 == sim_sensors.height/width
+        - Sensors to Capture == defined on each agent, RGBDS currently
         """
+
         try:
             for k, v in config.items():
                 if k not in self._config:
