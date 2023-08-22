@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 
 from habitat.sims.unreal.unreal_link import UnrealLink
 
+from habitat.sims.unreal.observations import ObservationsSingleton
+
 import asyncio
 
 from enum import Enum
@@ -65,6 +67,8 @@ class UnrealSimActions(Enum):
 
 @registry.register_sensor
 class UnrealRGBSensor(RGBSensor):
+    unreal_buffer_name = "FinalImage"
+
     def __init__(self, config):
         super().__init__(config=config)
 
@@ -79,6 +83,7 @@ class UnrealRGBSensor(RGBSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted RGB sensor observation? {self}")
+        return ObservationsSingleton.buffers[self.unreal_buffer_name]
         """obs = robot_obs.get(self.uuid, None)
 
         assert obs is not None, "Invalid observation for {} sensor".format(
@@ -95,6 +100,7 @@ class UnrealRGBSensor(RGBSensor):
 class UnrealDepthSensor(DepthSensor):
     min_depth_value: float
     max_depth_value: float
+    unreal_buffer_name = "WorldDepth"
 
     # TODO define min/max
     def __init__(self, config):
@@ -118,6 +124,7 @@ class UnrealDepthSensor(DepthSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted Depth sensor observation? {self}")
+        return ObservationsSingleton.buffers[self.unreal_buffer_name]
         """
         obs = robot_obs.get(self.uuid, None)
 
@@ -144,6 +151,8 @@ class UnrealDepthSensor(DepthSensor):
 
 @registry.register_sensor
 class UnrealSemanticSensor(SemanticSensor):
+    unreal_buffer_name = "ObjectMask"
+
     def __init__(self, config) -> None:
         super().__init__(config=config)
 
@@ -158,6 +167,7 @@ class UnrealSemanticSensor(SemanticSensor):
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
         print(f"Wanted Semantic sensor observation? {self}")
+        return ObservationsSingleton.buffers[self.unreal_buffer_name]
 
         """obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
@@ -168,10 +178,6 @@ class UnrealSemanticSensor(SemanticSensor):
             obs = obs[..., None]
         return obs
         """
-
-
-class IncompatibleSetting(Exception):
-    pass
 
 
 @registry.register_simulator(name="Unreal-Simulator-v0")
@@ -201,7 +207,7 @@ class UnrealSimulator(Simulator):
         - Max Slope == UnrealConfig TODO define unit
         - Max Step Height == UnrealConfig TODO define unit
         - Max Danger Distance == agent.radius
-        - Turn Amount? == SimulatorCOnfig.turn_angle in degrees
+        - Turn Amount? == SimulatorConfig.turn_angle in degrees
         - Move Amount? == SimulatorConfig.forward_step_size in metres
         - Capture Resolution 640x480 == sim_sensors.height/width
         - Sensors to Capture == defined on each agent, RGBDS currently
@@ -214,17 +220,8 @@ class UnrealSimulator(Simulator):
         self.client = UnrealLink("100.75.90.104")  # HOME
         self.client.connect_server()
 
-        async def submit_settings(self: UnrealSimulator):
-            try:
-                for k, v in self._config.items():
-                    response = await self.client.send_packet(f"{k} {v}")
-                    if response != "OK":
-                        raise IncompatibleSetting
-            except IncompatibleSetting:
-                print(f"Couldn't register setting {k} with value {v}")
-
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(submit_settings(self))
+        loop.run_until_complete(self.client.submit_settings(self._config))
 
         sim_sensors = []
         for agent_config in self._config.agents.values():
@@ -265,6 +262,8 @@ class UnrealSimulator(Simulator):
         return observations
         """
         print("Resetting environment")
+        self.client.capture_observation()
+        return self._sensor_suite.get_observations()
 
     def step(self, action, action_params):
         r"""TODO implement"""

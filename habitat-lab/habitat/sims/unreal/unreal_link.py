@@ -4,6 +4,8 @@ import struct
 import json
 import base64
 
+from habitat.sims.unreal.observations import ObservationsSingleton
+
 
 class UnrealLink:
     def __init__(self, ip="127.0.0.1") -> None:
@@ -37,19 +39,37 @@ class UnrealLink:
         except Exception as e:
             print(e)
 
-    async def send_packet(self, payload):
+    async def __send_packet(self, payload):
         self.client.send(payload.encode())
 
         # always await a response
         response = await self.__receive_packet()
 
+        return response
+
+    async def execute_action(self, action_name):
+        # TODO error check? make new json field to detect errors or stop?
+        observation = self.__send_packet(f"action {action_name}")
+
         # Testing if it's a json... yeah
-        if response[0] == "{":
-            obj = json.loads(response)
-            for key, value in obj.items():
-                print(f"Got buffer {key}")
-                image = open(f"{key}.png", "wb")
-                image.write(base64.b64decode(value))
-                image.close()
-        else:
-            print(response)
+        if observation[0] == "{":
+            obj = json.loads(observation)
+            ObservationsSingleton.parse_buffers(obj)
+
+    async def capture_observation(self):
+        # TODO error check? make new json field to detect errors or stop?
+        observation = self.__send_packet("capture")
+
+        # Testing if it's a json... yeah
+        if observation[0] == "{":
+            obj = json.loads(observation)
+            ObservationsSingleton.parse_buffers(obj)
+
+    async def submit_settings(self, config):
+        try:
+            for k, v in config.items():
+                response = await self.client.__send_packet(f"{k} {v}")
+                if response != "OK":
+                    raise Exception
+        except:
+            print(f"Couldn't register setting {k} with value {v}")
