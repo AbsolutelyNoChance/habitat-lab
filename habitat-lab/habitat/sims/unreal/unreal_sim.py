@@ -288,11 +288,12 @@ class UnrealSimulator(Simulator):
         # check if action supported
         # self.client.send_packet
 
+        # unreal action mappings
         possible_moves = {
             0: "stop",
-            1: "move_forward",
-            2: "turn_left",
-            3: "turn_right",
+            1: "forward",
+            2: "left",
+            3: "right",
         }
 
         loop = asyncio.get_event_loop()
