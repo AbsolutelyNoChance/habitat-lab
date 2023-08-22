@@ -229,15 +229,16 @@ class UnrealSimulator(Simulator):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(submit_settings(self))
 
-        self.sensors = []
-        for sensor_cfg in self._config.sensors.values():
-            sensor_type = registry.get_sensor(sensor_cfg.type)
+        sim_sensors = []
+        for agent_config in self.habitat_config.agents.values():
+            for sensor_cfg in agent_config.sim_sensors.values():
+                sensor_type = registry.get_sensor(sensor_cfg.type)
 
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.type
-            )
-            self.sensors.append(sensor_type(sensor_cfg))
-        self._sensor_suite = SensorSuite(self.sensors)
+                assert (
+                    sensor_type is not None
+                ), "invalid sensor type {}".format(sensor_cfg.type)
+                sim_sensors.append(sensor_type(sensor_cfg))
+        self._sensor_suite = SensorSuite(sim_sensors)
 
         self._action_space = spaces.Discrete(
             len(
