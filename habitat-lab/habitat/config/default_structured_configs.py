@@ -1392,6 +1392,12 @@ class HabitatSimV0Config(HabitatBaseConfig):
 
 
 @dataclass
+class UnrealConfig(HabitatBaseConfig):
+    max_slope: float = 20.0
+    max_step_height: float = 40.0
+
+
+@dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
     forward_step_size: float = 0.25  # in metres
@@ -1460,11 +1466,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # Configuration for rendering
     renderer: RendererConfig = RendererConfig()
 
-
-@dataclass
-class UnrealConfig(HabitatBaseConfig):
-    max_slope: float = 20.0
-    max_step_height: float = 40.0
+    # Unreal specific settings
+    unreal_config: UnrealConfig = UnrealConfig()
 
 
 @dataclass
@@ -2222,12 +2225,6 @@ cs.store(
     group="habitat/task/measurements",
     name="habitat_perf",
     node=RuntimePerfStatsMeasurementConfig,
-)
-
-cs.store(
-    group="unreal_config",  # config group
-    name="unreal_config",  # config name
-    node=UnrealConfig,
 )
 
 

@@ -14,6 +14,8 @@ habitat:
     type: Unreal-Simulator-v0
     agents:
       main_agent:
+        height: 2.0
+        radius: 0.5
         sim_sensors:
           rgb_sensor:
             width: 640
@@ -29,7 +31,7 @@ habitat:
             type: UnrealSemanticSensor
     forward_step_size: 0.25
     turn_angle: 15
+    unreal_config:
+      max_slope: 25.0
+      max_step_height: 30.0
 
-unreal_config:
-  max_slope: 25.0
-  max_step_height: 30.0
