@@ -214,7 +214,7 @@ class UnrealSimulator(Simulator):
 
         self.client = UnrealLink()  # TODO specify IP to reach home
 
-        async def submit_settings():
+        async def submit_settings(self):
             try:
                 for k, v in self._config.items():
                     response = await self.client.send_packet(f"{k} {v}")
@@ -224,7 +224,7 @@ class UnrealSimulator(Simulator):
                 print(f"Couldn't register setting {k} with value {v}")
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(submit_settings())
+        loop.run_until_complete(submit_settings(self))
 
         self.sensors = []
         for s in self._config["capture_sensors"].split(","):
