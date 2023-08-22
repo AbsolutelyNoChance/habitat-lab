@@ -47,5 +47,11 @@ class ObservationsSingleton(metaclass=Singleton):
 
         print(f"Got observations: {', '.join([k for k in json.keys()])}")
 
+    def __getattr__(self, name):
+        return self.buffers[name]
+
+    def __getitem__(self, name):
+        return self.buffers[name]
+
 
 Observations: ObservationsSingleton = ObservationsSingleton()
