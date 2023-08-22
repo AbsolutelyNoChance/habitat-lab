@@ -262,6 +262,7 @@ class UnrealSimulator(Simulator):
         )
         return observations
         """
+        print("Resetting environment")
 
     def step(self, action, action_params):
         r"""TODO implement"""
