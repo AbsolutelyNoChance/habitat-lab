@@ -288,6 +288,20 @@ class UnrealSimulator(Simulator):
         # check if action supported
         # self.client.send_packet
 
+        possible_moves = {
+            0: "stop",
+            1: "move_forward",
+            2: "turn_left",
+            3: "turn_right",
+        }
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(
+            self.client.execute_action(possible_moves[action])
+        )
+
+        return self._sensor_suite.get_observations(link=self.client)
+
         """if action in self._robot_config.base_actions:
             getattr(self._robot.base, action)(**action_params)
         elif action in self._robot_config.camera_actions:
