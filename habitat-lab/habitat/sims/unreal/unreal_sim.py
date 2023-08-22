@@ -19,6 +19,8 @@ from habitat.core.simulator import (
     SensorSuite,
     Simulator,
 )
+
+from habitat.core.dataset import Episode
 from habitat.core.utils import center_crop, try_cv2_import
 
 if TYPE_CHECKING:
@@ -306,6 +308,10 @@ class UnrealSimulator(Simulator):
     ) -> None:
         print(f"new config: {habitat_config}")
         print(f"{should_close_on_new_scene=}")
+        try:
+            print(f"{ep_info=}")
+        except:
+            print("no ep info")
 
         """is_same_scene = habitat_config.scene == self._current_scene
         self.habitat_config = habitat_config
