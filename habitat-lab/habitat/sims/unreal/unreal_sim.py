@@ -363,3 +363,7 @@ class UnrealSimulator(Simulator):
         # TODO implement, this is just a temporary fix
 
         return state
+
+    def step_physics(delta):
+        pass
+        # TODO habitat always call this even if step_physics is set to false?
