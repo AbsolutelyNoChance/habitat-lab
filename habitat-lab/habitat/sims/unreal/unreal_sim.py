@@ -212,7 +212,7 @@ class UnrealSimulator(Simulator):
         except UnknownSetting:
             print(f"unknown setting given to initializer ({k})")
 
-        self.client = UnrealLink()  # TODO specify IP to reach home
+        self.client = UnrealLink("100.75.90.104")  # HOME
         self.client.connect_server()
 
         async def submit_settings(self: UnrealSimulator):
