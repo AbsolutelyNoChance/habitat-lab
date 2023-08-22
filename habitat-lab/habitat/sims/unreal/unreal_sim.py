@@ -334,9 +334,7 @@ class UnrealSimulator(Simulator):
             self.__class__.__name__
         )
 
-        state = AgentState()
-        state.position = [0, 0, 0]
-        state.rotation = [0, 0, 0]
+        state = AgentState([0, 0, 0], [0, 0, 0])
         # TODO implement, this is just a temporary fix
 
         return state
