@@ -2225,11 +2225,9 @@ cs.store(
 )
 
 cs.store(
-    group="habitat/unreal_config",  # config group
+    group="habitat/",  # config group
     name="unreal_config",  # config name
     node=UnrealConfig,
-    # Note, it is also possible to override the package (that's derived from the Config Group by default)
-    # package="habitat.new.custom_structured_config",
 )
 
 
