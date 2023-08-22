@@ -55,6 +55,8 @@ class UnrealLink:
         if observation[0] == "{":
             obj = json.loads(observation)
             Observations.parse_buffers(obj)
+        else:
+            print(observation)
 
     async def capture_observation(self):
         # TODO error check? make new json field to detect errors or stop?
@@ -64,6 +66,8 @@ class UnrealLink:
         if observation[0] == "{":
             obj = json.loads(observation)
             Observations.parse_buffers(obj)
+        else:
+            print(observation)
 
     async def submit_settings(self, config):
         try:
