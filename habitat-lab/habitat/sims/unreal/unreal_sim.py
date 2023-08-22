@@ -332,5 +332,8 @@ class UnrealSimulator(Simulator):
         assert agent_id == 0, "No support of multi agent in {} yet.".format(
             self.__class__.__name__
         )
-        # TODO implement
-        # return state
+
+        state = {position: [0, 0, 0], rotation: [0, 0, 0]}
+        # TODO implement, this is just a temporary fix
+
+        return state
