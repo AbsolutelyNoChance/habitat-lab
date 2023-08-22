@@ -132,7 +132,7 @@ class UnrealDepthSensor(DepthSensor):
 
 @registry.register_sensor
 class UnrealSemanticSensor(SemanticSensor):
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
