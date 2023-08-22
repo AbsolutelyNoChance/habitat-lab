@@ -298,6 +298,27 @@ class UnrealSimulator(Simulator):
 
         return output
 
+    def reconfigure(
+        self,
+        habitat_config: DictConfig,
+        ep_info: Optional[Episode] = None,
+        should_close_on_new_scene: bool = True,
+    ) -> None:
+        print(f"new config: {habitat_config}")
+        print(f"{should_close_on_new_scene=}")
+
+        """is_same_scene = habitat_config.scene == self._current_scene
+        self.habitat_config = habitat_config
+        self.sim_config = self.create_sim_config(self._sensor_suite)
+        if not is_same_scene:
+            self._current_scene = habitat_config.scene
+            if should_close_on_new_scene:
+                self.close(destroy=False)
+            super().reconfigure(self.sim_config)
+
+        self._update_agents_state()
+        """
+
     def get_agent_state(
         self, agent_id: int = 0, base_state_type: str = "odom"
     ):
