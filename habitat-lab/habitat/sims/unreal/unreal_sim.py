@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 
 from habitat.sims.unreal.unreal_link import UnrealLink
 
+import asyncio
+
 
 cv2 = try_cv2_import()
 
@@ -213,13 +215,17 @@ class UnrealSimulator(Simulator):
 
         self.client = UnrealLink()  # TODO specify IP to reach home
 
-        try:
-            for k, v in self._config.items():
-                response = await self.client.send_packet(f"{k} {v}")
-                if response != "OK":
-                    raise IncompatibleSetting
-        except IncompatibleSetting:
-            print(f"Couldn't register setting {k} with value {v}")
+        async def submit_settings():
+            try:
+                for k, v in self._config.items():
+                    response = await self.client.send_packet(f"{k} {v}")
+                    if response != "OK":
+                        raise IncompatibleSetting
+            except IncompatibleSetting:
+                print(f"Couldn't register setting {k} with value {v}")
+
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(submit_settings)
 
         self.sensors = []
         for s in self._config["capture_sensors"].split(","):
@@ -237,6 +243,7 @@ class UnrealSimulator(Simulator):
             )
         )
         print(f"action space: {self._action_space}")
+        return
 
     @property
     def sensor_suite(self) -> SensorSuite:
