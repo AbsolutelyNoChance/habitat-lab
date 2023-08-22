@@ -1462,6 +1462,12 @@ class SimulatorConfig(HabitatBaseConfig):
 
 
 @dataclass
+class UnrealConfig(HabitatBaseConfig):
+    max_slope: float = 20.0
+    max_step_height: float = 40.0
+
+
+@dataclass
 class PyrobotSensor(HabitatBaseConfig):
     pass
 
@@ -2216,6 +2222,14 @@ cs.store(
     group="habitat/task/measurements",
     name="habitat_perf",
     node=RuntimePerfStatsMeasurementConfig,
+)
+
+cs.store(
+    group="habitat/unreal_config",  # config group
+    name="unreal_config",  # config name
+    node=UnrealConfig,
+    # Note, it is also possible to override the package (that's derived from the Config Group by default)
+    # package="habitat.new.custom_structured_config",
 )
 
 
