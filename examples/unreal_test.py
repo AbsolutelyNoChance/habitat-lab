@@ -7,7 +7,7 @@
 import argparse
 
 import habitat
-from habitat.sims.unreal import UnrealSimActions
+from habitat.sims.unreal.unreal_sim import UnrealSimActions
 
 
 class ForwardOnlyAgent(habitat.Agent):
