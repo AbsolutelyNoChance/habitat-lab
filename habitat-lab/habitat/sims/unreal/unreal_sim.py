@@ -160,10 +160,6 @@ class UnrealSemanticSensor(SemanticSensor):
         """
 
 
-class UnknownSetting(Exception):
-    pass
-
-
 class IncompatibleSetting(Exception):
     pass
 
@@ -203,16 +199,7 @@ class UnrealSimulator(Simulator):
 
         print(f"config: {config}")
 
-        try:
-            for k, v in config.items():
-                if k not in self._config:
-                    # ERROR unused settings?
-                    raise UnknownSetting(k)
-                else:
-                    # override defaults
-                    self._config[k] = v
-        except UnknownSetting:
-            print(f"unknown setting given to initializer ({k})")
+        self._config = config
 
         self.client = UnrealLink("100.75.90.104")  # HOME
         self.client.connect_server()
@@ -230,7 +217,7 @@ class UnrealSimulator(Simulator):
         loop.run_until_complete(submit_settings(self))
 
         sim_sensors = []
-        for agent_config in self.habitat_config.agents.values():
+        for agent_config in self._config.agents.values():
             for sensor_cfg in agent_config.sim_sensors.values():
                 sensor_type = registry.get_sensor(sensor_cfg.type)
 
