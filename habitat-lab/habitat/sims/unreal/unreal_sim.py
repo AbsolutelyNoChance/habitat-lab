@@ -224,7 +224,7 @@ class UnrealSimulator(Simulator):
                 print(f"Couldn't register setting {k} with value {v}")
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(submit_settings)
+        loop.run_until_complete(submit_settings())
 
         self.sensors = []
         for s in self._config["capture_sensors"].split(","):
