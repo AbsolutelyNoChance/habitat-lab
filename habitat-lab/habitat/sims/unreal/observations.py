@@ -26,9 +26,8 @@ import numpy as np
 
 @attr.s(auto_attribs=True, slots=True)
 class ObservationsSingleton(metaclass=Singleton):
-    buffers_to_get: List[str]
-
-    buffers: Dict[str, VisualObservation]
+    buffers_to_get: List[str] = attr.ib(init=False, factory=list)
+    buffers: Dict[str, VisualObservation] = attr.ib(init=False, factory=dict)
 
     def set_buffers(self, buffers: List[str]):
         # TODO implement this
