@@ -263,7 +263,7 @@ class UnrealSimulator(Simulator):
         """
         print("Resetting environment")
         self.client.capture_observation()
-        return self._sensor_suite.get_observations()
+        return self._sensor_suite.get_observations(link=self.client)
 
     def step(self, action, action_params):
         r"""TODO implement"""
