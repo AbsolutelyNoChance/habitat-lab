@@ -364,6 +364,6 @@ class UnrealSimulator(Simulator):
 
         return state
 
-    def step_physics(delta):
+    def step_physics(self, delta):
         pass
         # TODO habitat always call this even if step_physics is set to false?
