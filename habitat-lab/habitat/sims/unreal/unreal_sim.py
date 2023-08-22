@@ -300,7 +300,7 @@ class UnrealSimulator(Simulator):
 
     def reconfigure(
         self,
-        habitat_config: DictConfig,
+        habitat_config: Any,
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
