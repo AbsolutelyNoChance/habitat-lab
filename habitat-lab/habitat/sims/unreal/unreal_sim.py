@@ -4,7 +4,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import TYPE_CHECKING, Any, Optional
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+    cast,
+)
 
 import numpy as np
 
@@ -328,6 +339,18 @@ class UnrealSimulator(Simulator):
 
         self._update_agents_state()
         """
+
+    def geodesic_distance(
+        self,
+        position_a: Union[Sequence[float], np.ndarray],
+        position_b: Union[
+            Sequence[float], Sequence[Sequence[float]], np.ndarray
+        ],
+        episode: Optional[Episode] = None,
+    ) -> float:
+        # TODO implement
+        print(f"Wanted distance from {position_a} to {position_b}")
+        return 0.0
 
     def get_agent_state(
         self, agent_id: int = 0, base_state_type: str = "odom"
