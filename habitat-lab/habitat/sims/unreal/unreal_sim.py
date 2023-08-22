@@ -262,7 +262,9 @@ class UnrealSimulator(Simulator):
         return observations
         """
         print("Resetting environment")
-        self.client.capture_observation()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.client.capture_observation())
+
         return self._sensor_suite.get_observations(link=self.client)
 
     def step(self, action, action_params):
