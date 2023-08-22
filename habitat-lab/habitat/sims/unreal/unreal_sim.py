@@ -28,6 +28,7 @@ from habitat.sims.unreal.unreal_link import UnrealLink
 
 import asyncio
 
+from enum import Enum
 
 cv2 = try_cv2_import()
 
@@ -51,6 +52,13 @@ def _resize_observation(obs, observation_space, config):
 
 # What scale are we using?
 MM_IN_METER = 1000  # millimeters in a meter
+
+
+class UnrealSimActions(Enum):
+    stop = 0
+    move_forward = 1
+    turn_left = 2
+    turn_right = 3
 
 
 @registry.register_sensor
@@ -227,7 +235,8 @@ class UnrealSimulator(Simulator):
                 sim_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(sim_sensors)
 
-        self._action_space = spaces.Discrete(
+        # TODO idk how to use this
+        """self._action_space = spaces.Discrete(
             len(
                 self.sim_config.agents[
                     self.habitat_config.default_agent_id
@@ -235,6 +244,7 @@ class UnrealSimulator(Simulator):
             )
         )
         print(f"action space: {self._action_space}")
+        """
         return
 
     @property
