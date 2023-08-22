@@ -189,7 +189,7 @@ class UnrealSimulator(Simulator):
         "capture_sensors": "FinalImage,ObjectMask,WorldNormal,SceneDepth",
     }  # TODO define default values, units
 
-    async def __init__(self, config: "DictConfig") -> None:
+    def __init__(self, config: "DictConfig") -> None:
         """TODO CONFIG:
         - Character Height
         - Max Slope
