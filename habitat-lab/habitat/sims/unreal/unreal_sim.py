@@ -350,7 +350,7 @@ class UnrealSimulator(Simulator):
     ) -> float:
         # TODO implement
         print(f"Wanted distance from {position_a} to {position_b}")
-        return 0.0
+        return 10.0
 
     def get_agent_state(
         self, agent_id: int = 0, base_state_type: str = "odom"
