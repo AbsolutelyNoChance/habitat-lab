@@ -281,12 +281,10 @@ class UnrealSimulator(Simulator):
 
         return self._sensor_suite.get_observations(link=self.client)
 
-    def step(self, action, action_params):
+    def step(self, action):
         r"""TODO implement"""
 
-        print(
-            f"Attempting to execute action {action} with params {action_params}"
-        )
+        print(f"Attempting to execute action {action}")
         # check if action supported
         # self.client.send_packet
 
