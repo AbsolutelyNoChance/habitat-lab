@@ -2225,7 +2225,7 @@ cs.store(
 )
 
 cs.store(
-    group="habitat/",  # config group
+    group="unreal_config",  # config group
     name="unreal_config",  # config name
     node=UnrealConfig,
 )
