@@ -39,11 +39,12 @@ class UnrealSimActionsSingleton(metaclass=Singleton):
         if isinstance(action, str):
             return action
         elif isinstance(action, int):
-            return {
+            a = [
                 i
                 for i in self._known_actions
                 if self._known_actions[i] == action
-            }
+            ]
+            return a[0]  # assume only one action has that int code
         else:
             return "stop"
 
