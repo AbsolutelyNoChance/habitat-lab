@@ -35,6 +35,18 @@ class UnrealSimActionsSingleton(metaclass=Singleton):
 
     _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
 
+    def get_unreal_action(self, action) -> str:
+        if isinstance(action, str):
+            return action
+        elif isinstance(action, int):
+            return {
+                i
+                for i in self._known_actions
+                if self._known_actions[i] == action
+            }
+        else:
+            return "stop"
+
     def __attrs_post_init__(self):
         for action in _DefaultUnrealSimActions:
             self._known_actions[action.name] = action.value

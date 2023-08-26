@@ -288,22 +288,12 @@ class UnrealSimulator(Simulator):
         # check if action supported
         # self.client.send_packet
 
-        # unreal action mappings
-        possible_moves = {
-            0: "stop",
-            1: "forward",
-            2: "left",
-            3: "right",
-        }
-
         loop = asyncio.get_event_loop()
         if action is None:
             # according to habitat_sim given action can be null?
             loop.run_until_complete(self.client.capture_observation())
         else:
-            loop.run_until_complete(
-                self.client.execute_action(possible_moves[action])
-            )
+            loop.run_until_complete(self.client.execute_action(action))
 
         return self._sensor_suite.get_observations(link=self.client)
 

@@ -6,6 +6,8 @@ import base64
 
 from habitat.sims.unreal.observations import Observations
 
+from habitat.sims.unreal.actions import UnrealSimActions
+
 
 class UnrealLink:
     def __init__(self, ip="127.0.0.1") -> None:
@@ -47,8 +49,9 @@ class UnrealLink:
 
         return response
 
-    async def execute_action(self, action_name):
+    async def execute_action(self, action):
         # TODO error check? make new json field to detect errors or stop?
+        action_name = UnrealSimActions.get_unreal_action(action)
         observation = await self.__send_packet(f"action {action_name}")
 
         # Testing if it's a json... yeah
