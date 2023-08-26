@@ -297,9 +297,13 @@ class UnrealSimulator(Simulator):
         }
 
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(
-            self.client.execute_action(possible_moves[action])
-        )
+        if action is None:
+            # according to habitat_sim given action can be null?
+            loop.run_until_complete(self.client.capture_observation())
+        else:
+            loop.run_until_complete(
+                self.client.execute_action(possible_moves[action])
+            )
 
         return self._sensor_suite.get_observations(link=self.client)
 
