@@ -325,6 +325,10 @@ class UnrealSimulator(Simulator):
         # TODO
         print(f"Attempting to render with mode {mode}")
 
+        # Trigger a recapture
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.client.capture_observation())
+
         observations = self._sensor_suite.get_observations(link=self.client)
 
         output = observations.get(mode)
