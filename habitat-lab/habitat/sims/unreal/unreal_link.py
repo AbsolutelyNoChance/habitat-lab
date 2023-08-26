@@ -52,6 +52,9 @@ class UnrealLink:
     async def execute_action(self, action):
         # TODO error check? make new json field to detect errors or stop?
         action_name = UnrealSimActions.get_unreal_action(action)
+
+        print(f"Executing action {action_name}")
+
         observation = await self.__send_packet(f"action {action_name}")
 
         # Testing if it's a json... yeah
