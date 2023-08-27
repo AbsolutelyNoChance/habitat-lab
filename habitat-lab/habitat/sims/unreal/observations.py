@@ -23,6 +23,28 @@ import json
 
 import numpy as np
 
+import cv2
+
+import os
+
+os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
+
+
+def display_grayscale(image):
+    img_bgr = np.repeat(image, 3, 2)
+    cv2.imshow("Depth Sensor", img_bgr)
+    return cv2.waitKey(0)
+
+
+def display_rgb(image):
+    img_bgr = image[..., ::-1]
+    cv2.imshow("RGB", img_bgr)
+    return cv2.waitKey(0)
+
+
+DISPLAY_FINAL_IMAGE = True
+DISPLAY_DEPTH = True
+
 
 @attr.s(auto_attribs=True, slots=True)
 class ObservationsSingleton(metaclass=Singleton):
@@ -39,11 +61,31 @@ class ObservationsSingleton(metaclass=Singleton):
             print(f"Got buffer {key}")
             image = base64.b64decode(value)
 
-            f = open(f"{key}.png", "wb")
+            if key == "FinalImage":
+                f = open(f"{key}.jpg", "wb")
+            elif "Depth" in key:
+                f = open(f"{key}.exr", "wb")
+            else:
+                f = open(f"{key}.png", "wb")
             f.write(image)
             f.close()
 
-            self.buffers[key] = np.asarray(image)
+            image = np.asarray(bytearray(image), dtype="uint8")
+
+            # use imdecode function
+            if "Depth" in key:
+                image = cv2.imdecode(image, cv2.IMREAD_ANYDEPTH)
+            else:
+                image = cv2.imdecode(image, cv2.IMREAD_ANYCOLOR)
+                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+            # correctly layout data
+            self.buffers[key] = image
+
+            if DISPLAY_FINAL_IMAGE and key == "FinalImage":
+                display_rgb(image)
+            elif DISPLAY_DEPTH and "Depth" in key:
+                display_rgb(image)
 
         print(f"Got observations: {', '.join([k for k in obj.keys()])}")
 
