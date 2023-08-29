@@ -27,8 +27,6 @@ import cv2
 
 import os
 
-os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "1"
-
 
 def display_grayscale(image):
     img_bgr = np.repeat(image, 3, 2)
@@ -63,8 +61,6 @@ class ObservationsSingleton(metaclass=Singleton):
 
             if key == "FinalImage":
                 f = open(f"{key}.jpg", "wb")
-            elif "Depth" in key:
-                f = open(f"{key}.exr", "wb")
             else:
                 f = open(f"{key}.png", "wb")
             f.write(image)
