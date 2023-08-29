@@ -14,8 +14,8 @@ habitat:
     type: Unreal-Simulator-v0
     agents:
       main_agent:
-        height: 2.0
-        radius: 0.5
+        height: 1.80
+        radius: 0.25
         sim_sensors:
           rgb_sensor:
             width: 640
