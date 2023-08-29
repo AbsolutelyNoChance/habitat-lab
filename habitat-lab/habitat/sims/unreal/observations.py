@@ -71,6 +71,9 @@ class ObservationsSingleton(metaclass=Singleton):
             # use imdecode function
             if "Depth" in key:
                 image = cv2.imdecode(image, cv2.IMREAD_ANYDEPTH)
+                image = np.fliplr(
+                    image
+                )  # For some reason, depth is flipped along X axis
             else:
                 image = cv2.imdecode(image, cv2.IMREAD_ANYCOLOR)
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
