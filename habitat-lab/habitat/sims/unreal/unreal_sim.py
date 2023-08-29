@@ -114,7 +114,7 @@ class UnrealRGBSensor(RGBSensor):
 class UnrealDepthSensor(DepthSensor):
     min_depth_value: float
     max_depth_value: float
-    unreal_buffer_name = "SceneDepth"
+    unreal_buffer_name = "Depth"
 
     # TODO define min/max
     def __init__(self, config):
