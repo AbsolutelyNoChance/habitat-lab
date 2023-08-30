@@ -10,8 +10,12 @@ defaults:
 habitat:
   environment:
     max_episode_steps: 500
+ # dataset:
+ #   type: PointNav-v1
+ #   data_path: ""
   simulator:
     type: Unreal-Simulator-v0
+    scene: UE5
     agents:
       main_agent:
         height: 1.80
@@ -25,6 +29,9 @@ habitat:
             width: 640
             height: 480
             type: UnrealDepthSensor
+            min_depth: 0.0
+            max_depth: 20.0
+            normalize_depth: True
           semantic_sensor:
             width: 640
             height: 480
