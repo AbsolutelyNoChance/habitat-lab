@@ -8,6 +8,8 @@ from habitat.sims.unreal.observations import Observations
 
 from habitat.sims.unreal.actions import UnrealSimActions
 
+from omegaconf import OmegaConf
+
 
 class UnrealLink:
     def __init__(self, ip="127.0.0.1") -> None:
@@ -76,10 +78,12 @@ class UnrealLink:
             print(observation)
 
     async def submit_settings(self, config):
-        try:
-            for k, v in config.items():
-                response = await self.client.__send_packet(f"{k} {v}")
-                if response != "OK":
-                    raise Exception
-        except:
-            print(f"Couldn't register setting {k} with value {v}")
+        result = await self.__send_packet(
+            json.dumps(OmegaConf.to_container(config))
+        )
+
+        if result == "OK":
+            pass
+        else:
+            print("Unreal server didn't accept the settings!")
+            exit()
