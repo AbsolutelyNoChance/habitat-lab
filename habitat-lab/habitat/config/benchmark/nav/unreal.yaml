@@ -25,17 +25,20 @@ habitat:
             width: 640
             height: 480
             type: UnrealRGBSensor
+            hfov: 90
           depth_sensor:
             width: 640
             height: 480
             type: UnrealDepthSensor
-            min_depth: 0.0
+            hfov: 90
             max_depth: 20.0
-            normalize_depth: True
+            min_depth: 0.0 #always 0.0, don't change
+            normalize_depth: True #always True, don't change
           semantic_sensor:
             width: 640
             height: 480
             type: UnrealSemanticSensor
+            hfov: 90
     forward_step_size: 0.25
     turn_angle: 15
     step_physics: False
