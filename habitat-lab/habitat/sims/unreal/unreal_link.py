@@ -85,5 +85,5 @@ class UnrealLink:
         if result == "OK":
             pass
         else:
-            print("Unreal server didn't accept the settings!")
+            print(f"Unreal server didn't accept the settings! {result}")
             exit()
