@@ -87,3 +87,15 @@ class UnrealLink:
         else:
             print(f"Unreal server didn't accept the settings! {result}")
             exit()
+
+    async def begin_simulation(self):
+        # TODO error check? make new json field to detect errors or stop?
+        print(f"Beginning the simulation")
+
+        result = await self.__send_packet("begin_sim")
+
+        if result == "OK":
+            pass
+        else:
+            print(f"Unreal server didn't start the simulation! {result}")
+            exit()

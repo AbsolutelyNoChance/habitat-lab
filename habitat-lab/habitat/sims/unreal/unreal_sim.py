@@ -248,6 +248,8 @@ class UnrealSimulator(Simulator):
                 sim_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(sim_sensors)
 
+        loop.run_until_complete(self.client.begin_simulation())
+
         # TODO idk how to use this
         """self._action_space = spaces.Discrete(
             len(
