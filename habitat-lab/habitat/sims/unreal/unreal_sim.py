@@ -391,7 +391,7 @@ class UnrealSimulator(Simulator):
         # state = AgentState(
         #    np.asarray([0, 0, 0]), quaternion.from_euler_angles([0, 0, 0])
         # )
-        state = AgentState(location, quaternion.quaternion(rotation))
+        state = AgentState(location, quaternion.quaternion(*rotation))
         # TODO implement, this is just a temporary fix
 
         return state
