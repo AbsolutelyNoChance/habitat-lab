@@ -40,8 +40,8 @@ def display_rgb(image):
     return cv2.waitKey(0)
 
 
-DISPLAY_FINAL_IMAGE = True
-DISPLAY_DEPTH = True
+DISPLAY_FINAL_IMAGE = False
+DISPLAY_DEPTH = False
 
 
 @attr.s(auto_attribs=True, slots=True)
