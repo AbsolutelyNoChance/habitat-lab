@@ -341,16 +341,12 @@ class UnrealSimulator(Simulator):
         except:
             print("no ep info")
 
-        """is_same_scene = habitat_config.scene == self._current_scene
-        self.habitat_config = habitat_config
-        self.sim_config = self.create_sim_config(self._sensor_suite)
-        if not is_same_scene:
-            self._current_scene = habitat_config.scene
-            if should_close_on_new_scene:
-                self.close(destroy=False)
-            super().reconfigure(self.sim_config)
+        self._config = habitat_config
 
-        self._update_agents_state()
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.client.submit_settings(self._config))
+
+        self.reset()
         """
 
     def geodesic_distance(
