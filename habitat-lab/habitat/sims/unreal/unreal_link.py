@@ -99,3 +99,17 @@ class UnrealLink:
         else:
             print(f"Unreal server didn't start the simulation! {result}")
             exit()
+
+    async def query_geodesic_distance(self, point_a, point_b):
+        # TODO error check? make new json field to detect errors or stop?
+        queried_distance = await self.__send_packet(
+            f"geodesic_distance {point_a} {point_b}"
+        )
+
+        try:
+            distance = float(queried_distance)
+            if distance == -1.0:
+                raise Exception("Invalid path!")
+            return distance
+        except Exception as e:
+            print(f"Could not compute geodesic distance! {e}")

@@ -364,9 +364,16 @@ class UnrealSimulator(Simulator):
         ],
         episode: Optional[Episode] = None,
     ) -> float:
-        # TODO implement
-        print(f"Wanted distance from {position_a} to {position_b}")
-        return 10.0
+        loop = asyncio.get_event_loop()
+        distance = loop.run_until_complete(
+            self.client.query_geodesic_distance(position_a, position_b)
+        )
+
+        print(
+            f"Computed distance from {position_a} to {position_b} = {distance}"
+        )
+
+        return distance
 
     def get_agent_state(
         self, agent_id: int = 0, base_state_type: str = "odom"
