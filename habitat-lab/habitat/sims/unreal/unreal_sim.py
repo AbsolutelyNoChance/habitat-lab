@@ -405,7 +405,11 @@ class UnrealSimulator(Simulator):
         # state = AgentState(
         #    np.asarray([0, 0, 0]), quaternion.from_euler_angles([0, 0, 0])
         # )
-        state = AgentState(location, quaternion.quaternion(*rotation))
+        # type specs state that List[float] is acceptable location format, but it later tries to do current_pos - prev_pos and that breaks.....
+        state = AgentState(
+            np.array(location, dtype=np.float32),
+            quaternion.quaternion(*rotation),
+        )
         # TODO implement, this is just a temporary fix
 
         return state
