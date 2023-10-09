@@ -47,7 +47,9 @@ DISPLAY_DEPTH = True
 @attr.s(auto_attribs=True, slots=True)
 class ObservationsSingleton(metaclass=Singleton):
     buffers_to_get: List[str] = attr.ib(init=False, factory=list)
-    buffers: Dict[str, VisualObservation] = attr.ib(init=False, factory=dict)
+    buffers: Dict[str, Union(VisualObservation, bool, List[float])] = attr.ib(
+        init=False, factory=dict
+    )
 
     def set_buffers(self, buffers: List[str]):
         # TODO implement this
@@ -57,6 +59,15 @@ class ObservationsSingleton(metaclass=Singleton):
         self.buffers = {}
         for key, value in obj.items():
             print(f"Got buffer {key}")
+
+            if key.startswith("_"):
+                # not an image
+                if key == "_location" or "_rotation":
+                    self.buffers[key] = [float(i) for i in value.split(" ")]
+                else:
+                    self.buffers[key] = value == "True"
+                continue
+
             image = base64.b64decode(value)
 
             if key == "FinalImage":

@@ -347,7 +347,14 @@ class UnrealSimulator(Simulator):
         loop.run_until_complete(self.client.submit_settings(self._config))
 
         self.reset()
+
+    def previous_step_collided(self) -> bool:
+        r"""Whether or not the previous step resulted in a collision
+
+        :return: :py:`True` if the previous step resulted in a collision,
+            :py:`False` otherwise
         """
+        return Observations["_previous_step_collided"]
 
     def geodesic_distance(
         self,
@@ -368,9 +375,13 @@ class UnrealSimulator(Simulator):
             self.__class__.__name__
         )
 
-        state = AgentState(
-            np.asarray([0, 0, 0]), quaternion.from_euler_angles([0, 0, 0])
-        )
+        location = Observations["_location"]
+        rotation = Observations["_rotation"]
+
+        # state = AgentState(
+        #    np.asarray([0, 0, 0]), quaternion.from_euler_angles([0, 0, 0])
+        # )
+        state = AgentState(location, quaternion.quaternion(rotation))
         # TODO implement, this is just a temporary fix
 
         return state
