@@ -62,7 +62,7 @@ class ObservationsSingleton(metaclass=Singleton):
 
             if key.startswith("_"):
                 # not an image
-                if key == "_location" or "_rotation":
+                if key in ["_location", "_rotation"]:
                     self.buffers[key] = [float(i) for i in value.split(" ")]
                 else:
                     self.buffers[key] = value == "True"
