@@ -417,3 +417,7 @@ class UnrealSimulator(Simulator):
     def step_physics(self, delta):
         pass
         # TODO habitat always call this even if step_physics is set to false?
+
+    def seed(self, seed: int) -> None:
+        # TODO do something with the seed? for the procedural generation
+        pass
