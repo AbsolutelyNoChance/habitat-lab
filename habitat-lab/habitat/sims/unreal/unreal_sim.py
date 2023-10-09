@@ -206,16 +206,7 @@ class UnrealSimulator(Simulator):
         config: configuration for initializing the Unreal object.
     """
 
-    _config = {
-        "character_height": 95,
-        "max_slope": 20,
-        "max_step_height": 40,
-        "max_danger_distance": 20,
-        "turn_amount": 69,
-        "move_amount": 420,
-        "capture_resolution": "640x480",
-        "capture_sensors": "FinalImage,ObjectMask,WorldNormal,SceneDepth",
-    }  # TODO define default values, units
+    current_level: int = 0
 
     def __init__(self, config: "DictConfig") -> None:
         """TODO CONFIG:
