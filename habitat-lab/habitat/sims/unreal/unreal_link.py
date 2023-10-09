@@ -104,7 +104,7 @@ class UnrealLink:
     async def query_geodesic_distance(self, point_a, point_b):
         # TODO error check? make new json field to detect errors or stop?
         queried_distance = await self.__send_packet(
-            f"geodesic_distance {point_a} {point_b}"
+            f"geodesic_distance {' '.join(map(str, point_a))} {' '.join(map(str, point_b))}"
         )
 
         try:
