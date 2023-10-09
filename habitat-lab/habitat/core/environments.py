@@ -129,7 +129,7 @@ class GymHabitatEnv(gym.Wrapper):
 
 
 @habitat.registry.register_env(name="UnrealEnv")
-class UnrealEnv(habitat.RLEnv):
+class UnrealEnv(gym.Wrapper):
     """
     Unreal Environment wrapper
     """
@@ -137,20 +137,8 @@ class UnrealEnv(habitat.RLEnv):
     def __init__(
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
-        print("OYYYYY")
         print(f"{config=}")
         print(f"{dataset=}")
-        super().__init__(config, dataset)
-
-    def get_reward_range(self):
-        return [-1, 1]  # TODO define range
-
-    def get_reward(self, observations):
-        print(self._env.get_metrics())
-        return 0
-
-    def get_done(self, observations):
-        return self.habitat_env.episode_over
-
-    def get_info(self, observations):
-        return self.habitat_env.get_metrics()
+        base_env = RLTaskEnv(config=config, dataset=dataset)
+        env = HabGymWrapper(env=base_env)
+        super().__init__(env)
