@@ -37,6 +37,8 @@ import quaternion
 from habitat.core.dataset import Episode
 from habitat.core.utils import center_crop, try_cv2_import
 
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
+
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
@@ -248,7 +250,17 @@ class UnrealSimulator(Simulator):
                 sim_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(sim_sensors)
 
-        loop.run_until_complete(self.client.begin_simulation())
+        self.target_location = loop.run_until_complete(
+            self.client.begin_simulation()
+        )
+
+        self.reset()
+
+        self.current_episode = self.build_episode(
+            self.get_agent_state().position,
+            self.get_agent_state().rotation,
+            self.target_location,
+        )
 
         # TODO idk how to use this
         """self._action_space = spaces.Discrete(
@@ -396,3 +408,16 @@ class UnrealSimulator(Simulator):
     def step_physics(self, delta):
         pass
         # TODO habitat always call this even if step_physics is set to false?
+
+    def build_episode(agent_position, agent_rotation, target_rotation):
+        goal_radius = 0.5  # TODO define?
+        goal = NavigationGoal(position=target_rotation, radius=goal_radius)
+
+        # Create dummy episode
+        dummy_episode = NavigationEpisode(
+            goals=[goal],
+            episode_id="dummy_id",
+            scene_id="dummy_scene",
+            start_position=agent_position,
+            start_rotation=agent_rotation,
+        )

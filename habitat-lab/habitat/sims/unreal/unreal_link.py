@@ -94,9 +94,10 @@ class UnrealLink:
 
         result = await self.__send_packet("begin_sim")
 
-        if result == "OK":
-            pass
-        else:
+        try:
+            target_location = [float(i) for i in result.split(" ")]
+            return target_location
+        except Exception as e:
             print(f"Unreal server didn't start the simulation! {result}")
             exit()
 
