@@ -47,7 +47,7 @@ DISPLAY_DEPTH = True
 @attr.s(auto_attribs=True, slots=True)
 class ObservationsSingleton(metaclass=Singleton):
     buffers_to_get: List[str] = attr.ib(init=False, factory=list)
-    buffers: Dict[str, Union(VisualObservation, bool, List[float])] = attr.ib(
+    buffers: Dict[str, Union[VisualObservation, bool, List[float]]] = attr.ib(
         init=False, factory=dict
     )
 
