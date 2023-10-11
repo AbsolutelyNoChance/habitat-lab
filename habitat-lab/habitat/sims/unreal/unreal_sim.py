@@ -190,8 +190,8 @@ class UnrealSemanticSensor(SemanticSensor):
         return spaces.Box(
             low=np.iinfo(np.uint32).min,
             high=np.iinfo(np.uint32).max,
-            shape=(self.config.height, self.config.width, 1),
-            dtype=np.int32,
+            shape=(self.config.height, self.config.width, 3),
+            dtype=np.uint8,
         )
 
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
@@ -238,7 +238,7 @@ class UnrealSimulator(Simulator):
 
         self._config = config
 
-        self.client = UnrealLink("100.75.90.104")  # HOME
+        self.client = UnrealLink()  # HOME "100.75.90.104"
         self.client.connect_server()
 
         loop = asyncio.get_event_loop()
@@ -261,6 +261,7 @@ class UnrealSimulator(Simulator):
 
         self.reset()
 
+        # TODO inject this into the environment to replace the dataset stuff?
         self.current_episode = build_episode(
             self.get_agent_state().position,
             self.get_agent_state().rotation,
