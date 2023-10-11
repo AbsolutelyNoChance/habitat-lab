@@ -85,6 +85,19 @@ class ObservationsSingleton(metaclass=Singleton):
                 image = np.fliplr(
                     image
                 )  # For some reason, depth is flipped along X axis
+
+                # print(f"depth has min={np.min(image)} and max={np.max(image)}")
+
+                if np.min(image) < 0 or np.max(image) > 2**16 - 1:
+                    print("Depth image out of range")
+                    exit()
+
+                image = image / (2**16 - 1)
+
+                # Fit habitat's data interface
+                image = np.expand_dims(image, axis=2)
+
+                # print(f"Depth has type: {type(image)} and {image.dtype}")
             else:
                 image = cv2.imdecode(image, cv2.IMREAD_ANYCOLOR)
                 image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
