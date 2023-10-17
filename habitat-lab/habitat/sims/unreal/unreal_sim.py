@@ -70,20 +70,6 @@ def _resize_observation(obs, observation_space, config):
     return obs
 
 
-def build_episode(agent_position, agent_rotation, target_rotation):
-    goal_radius = 0.5  # TODO define?
-    goal = NavigationGoal(position=target_rotation, radius=goal_radius)
-
-    # Create dummy episode
-    dummy_episode = NavigationEpisode(
-        goals=[goal],
-        episode_id="dummy_id",
-        scene_id="dummy_scene",
-        start_position=agent_position,
-        start_rotation=agent_rotation,
-    )
-
-
 # What scale are we using?
 MM_IN_METER = 1000  # millimeters in a meter
 
@@ -260,13 +246,6 @@ class UnrealSimulator(Simulator):
         )
 
         self.reset()
-
-        # TODO inject this into the environment to replace the dataset stuff?
-        self.current_episode = build_episode(
-            self.get_agent_state().position,
-            self.get_agent_state().rotation,
-            self.target_location,
-        )
 
         # TODO idk how to use this
         """self._action_space = spaces.Discrete(
