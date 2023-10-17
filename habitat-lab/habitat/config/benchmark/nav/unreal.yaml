@@ -8,11 +8,12 @@ defaults:
   - _self_
 
 habitat:
+  #env_task: UnrealEnv
   environment:
     max_episode_steps: 500
- # dataset:
+  dataset:
  #   type: PointNav-v1
- #   data_path: ""
+   data_path: data/datasets/pointnav/unreal-scenes/{split}/dataset.json.gz
   simulator:
     type: Unreal-Simulator-v0
     scene: UE5
