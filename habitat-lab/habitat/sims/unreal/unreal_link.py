@@ -20,7 +20,7 @@ class UnrealLink:
     def connect_server(self):
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.client.connect((self.ip, self.port))
-        self.client.settimeout(5)
+        self.client.settimeout(10)
 
     def close_connection(self):
         self.client.close()
