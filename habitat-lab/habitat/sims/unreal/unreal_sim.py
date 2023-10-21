@@ -98,7 +98,7 @@ class UnrealRGBSensor(RGBSensor):
 
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
-        print(f"Wanted RGB sensor observation? {self}")
+        # print(f"Wanted RGB sensor observation? {self}")
         return Observations[self.unreal_buffer_name]
         """obs = robot_obs.get(self.uuid, None)
 
@@ -139,7 +139,7 @@ class UnrealDepthSensor(DepthSensor):
 
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
-        print(f"Wanted Depth sensor observation? {self}")
+        # print(f"Wanted Depth sensor observation? {self}")
         return Observations[self.unreal_buffer_name]
         """
         obs = robot_obs.get(self.uuid, None)
@@ -182,7 +182,7 @@ class UnrealSemanticSensor(SemanticSensor):
 
     def get_observation(self, link: UnrealLink, *args: Any, **kwargs: Any):
         # TODO link.send_packet
-        print(f"Wanted Semantic sensor observation? {self}")
+        # print(f"Wanted Semantic sensor observation? {self}")
         return Observations[self.unreal_buffer_name]
 
         """obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
@@ -276,14 +276,14 @@ class UnrealSimulator(Simulator):
         """
         print("Resetting environment")
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.client.capture_observation())
+        loop.run_until_complete(self.client.reset_environment())
 
         return self._sensor_suite.get_observations(link=self.client)
 
     def step(self, action):
         r"""TODO implement"""
 
-        print(f"Attempting to execute action {action}")
+        # print(f"Attempting to execute action {action}")
         # check if action supported
         # self.client.send_packet
 
@@ -331,12 +331,12 @@ class UnrealSimulator(Simulator):
         ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
-        print(f"new config: {habitat_config}")
-        print(f"{should_close_on_new_scene=}")
-        try:
-            print(f"{ep_info=}")
-        except:
-            print("no ep info")
+        # print(f"new config: {habitat_config}")
+        # print(f"{should_close_on_new_scene=}")
+        # try:
+        #    print(f"{ep_info=}")
+        # except:
+        #    print("no ep info")
 
         self._config = habitat_config
 
@@ -366,9 +366,9 @@ class UnrealSimulator(Simulator):
             self.client.query_geodesic_distance(position_a, position_b)
         )
 
-        print(
-            f"Computed distance from {position_a} to {position_b} = {distance}"
-        )
+        # print(
+        #    f"Computed distance from {position_a} to {position_b} = {distance}"
+        # )
 
         return distance
 

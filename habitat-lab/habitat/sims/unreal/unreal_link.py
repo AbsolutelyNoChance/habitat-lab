@@ -37,7 +37,7 @@ class UnrealLink:
                 response += self.client.recv(next_rcv)
 
             decoded = response.decode()
-            print(f"Received {len(response)} bytes")
+            # print(f"Received {len(response)} bytes")
 
             return decoded
         except Exception as e:
@@ -51,6 +51,14 @@ class UnrealLink:
 
         return response
 
+    def __handle_observations(self, observation):
+        # Testing if it's a json... yeah
+        if observation[0] == "{":
+            obj = json.loads(observation)
+            Observations.parse_buffers(obj)
+        else:
+            print(observation)
+
     async def execute_action(self, action):
         # TODO error check? make new json field to detect errors or stop?
         action_name = UnrealSimActions.get_unreal_action(action)
@@ -59,33 +67,28 @@ class UnrealLink:
 
         observation = await self.__send_packet(f"action {action_name}")
 
-        # Testing if it's a json... yeah
-        if observation[0] == "{":
-            obj = json.loads(observation)
-            Observations.parse_buffers(obj)
-        else:
-            print(observation)
+        self.__handle_observations(observation)
 
     async def capture_observation(self):
         # TODO error check? make new json field to detect errors or stop?
         observation = await self.__send_packet("capture")
 
-        # Testing if it's a json... yeah
-        if observation[0] == "{":
-            obj = json.loads(observation)
-            Observations.parse_buffers(obj)
-        else:
-            print(observation)
+        self.__handle_observations(observation)
+
+    async def reset_environment(self):
+        observation = await self.__send_packet(f"reset")
+
+        self.__handle_observations(observation)
 
     async def submit_settings(self, config):
-        result = await self.__send_packet(
-            json.dumps(OmegaConf.to_container(config))
-        )
+        settings = json.dumps(OmegaConf.to_container(config))
+        result = await self.__send_packet(settings)
 
         if result == "OK":
             pass
         else:
             print(f"Unreal server didn't accept the settings! {result}")
+            print(f"Sent the payload: {settings}")
             exit()
 
     async def begin_simulation(self):
@@ -103,9 +106,9 @@ class UnrealLink:
 
     async def query_geodesic_distance(self, point_a, point_b):
         # TODO error check? make new json field to detect errors or stop?
-        queried_distance = await self.__send_packet(
-            f"geodesic_distance {' '.join(map(str, point_a))} {' '.join(map(str, point_b))}"
-        )
+        payload = f"geodesic_distance {' '.join(map(str, point_a))} {' '.join(map(str, point_b))}"
+        queried_distance = await self.__send_packet(payload)
+        # print(f"{payload=}")
 
         try:
             distance = float(queried_distance)

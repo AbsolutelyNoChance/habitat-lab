@@ -58,7 +58,7 @@ class ObservationsSingleton(metaclass=Singleton):
     def parse_buffers(self, obj):
         self.buffers = {}
         for key, value in obj.items():
-            print(f"Got buffer {key}")
+            # print(f"Got buffer {key}")
 
             if key.startswith("_"):
                 # not an image
@@ -110,7 +110,7 @@ class ObservationsSingleton(metaclass=Singleton):
             elif DISPLAY_DEPTH and "Depth" in key:
                 display_rgb(image)
 
-        print(f"Got observations: {', '.join([k for k in obj.keys()])}")
+        # print(f"Got observations: {', '.join([k for k in obj.keys()])}")
 
     def __getattr__(self, name):
         return self.buffers[name]
