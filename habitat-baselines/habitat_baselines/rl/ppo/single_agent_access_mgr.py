@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -21,12 +21,16 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-from habitat_baselines.rl.ppo.policy import NetPolicy, Policy
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.ppo import PPO
 from habitat_baselines.rl.ppo.updater import Updater
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+
+def linear_lr_schedule(percent_done: float) -> float:
+    return 1 - percent_done
 
 
 @baseline_registry.register_agent_access_mgr
@@ -37,10 +41,11 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
-        resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done_fn: Callable[[], float],
+        resume_state: Optional[Dict[str, Any]] = None,
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
+        agent_name=None,
     ):
         """
         :param percent_done_fn: Function that will return the percent of the
@@ -49,6 +54,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             specified in the config. Takes as input the current progress in
             training and returns the learning rate multiplier. The default behavior
             is to use `linear_lr_schedule`.
+        :param agent_name: the name of the agent for which we set the singleagentaccessmanager
         """
 
         self._env_spec = env_spec
@@ -60,6 +66,16 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         self._is_static_encoder = (
             not config.habitat_baselines.rl.ddppo.train_encoder
         )
+
+        if agent_name is None:
+            if len(config.habitat.simulator.agents_order) > 1:
+                raise ValueError(
+                    "If there is more than an agent, you should specify the agent name"
+                )
+            else:
+                agent_name = config.habitat.simulator.agents_order[0]
+
+        self.agent_name = agent_name
         self._nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
         self._percent_done_fn = percent_done_fn
         if lr_schedule_fn is None:
@@ -85,9 +101,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                     for k, v, in resume_state["state_dict"].items()
                 }
             )
-        self._policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
+
+    @property
+    def masks_shape(self) -> Tuple:
+        return (1,)
 
     @property
     def nbuffers(self):
@@ -97,7 +114,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         self,
         num_envs: int,
         env_spec: EnvironmentSpec,
-        actor_critic: Policy,
+        actor_critic: NetPolicy,
         policy_action_space: spaces.Space,
         config: "DictConfig",
         device,
@@ -128,9 +145,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         if create_rollouts_fn is None:
             create_rollouts_fn = self._create_storage
 
-        policy_action_space = self._actor_critic.get_policy_action_space(
-            self._env_spec.action_space
-        )
+        policy_action_space = self._actor_critic.policy_action_space
         self._rollouts = create_rollouts_fn(
             num_envs=self._num_envs,
             env_spec=self._env_spec,
@@ -152,15 +167,17 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         updater = updater_cls.from_config(actor_critic, self._ppo_cfg)
         logger.info(
-            "agent number of parameters: {}".format(
+            "Agent number of parameters: {}".format(
                 sum(param.numel() for param in updater.parameters())
             )
         )
         return updater
 
-    @property
-    def policy_action_space(self):
-        return self._policy_action_space
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        if len(list(self._updater.parameters())) > 0:
+            self._updater.init_distributed(
+                find_unused_params=find_unused_params
+            )
 
     def _create_policy(self) -> NetPolicy:
         """
@@ -168,13 +185,18 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         """
 
         policy = baseline_registry.get_policy(
-            self._config.habitat_baselines.rl.policy.name
+            self._config.habitat_baselines.rl.policy[self.agent_name].name
         )
+        if policy is None:
+            raise ValueError(
+                f"Couldn't find policy {self._config.habitat_baselines.rl.policy[self.agent_name].name}"
+            )
         actor_critic = policy.from_config(
             self._config,
             self._env_spec.observation_space,
             self._env_spec.action_space,
             orig_action_space=self._env_spec.orig_action_space,
+            agent_name=self.agent_name,
         )
         if (
             self._config.habitat_baselines.rl.ddppo.pretrained_encoder
@@ -217,7 +239,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._rollouts
 
     @property
-    def actor_critic(self) -> Policy:
+    def actor_critic(self) -> NetPolicy:
         return self._actor_critic
 
     @property
@@ -225,12 +247,15 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
+        # If there is nothing to load, then we return the empty dict
+        if self._updater.optimizer is None:
+            return {"state_dict": {}, "optim_state": {}}
         ret = {
             "state_dict": self._actor_critic.state_dict(),
             **self._updater.get_resume_state(),
         }
         if self._lr_scheduler is not None:
-            ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
+            ret["lr_sched_state"] = self._lr_scheduler.state_dict()
         return ret
 
     def get_save_state(self):
@@ -288,7 +313,3 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
             }
         )
     return obs_space
-
-
-def linear_lr_schedule(percent_done: float) -> float:
-    return 1 - percent_done

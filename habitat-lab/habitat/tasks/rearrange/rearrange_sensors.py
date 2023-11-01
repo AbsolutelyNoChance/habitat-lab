@@ -10,6 +10,7 @@ from collections import defaultdict, deque
 import numpy as np
 from gym import spaces
 
+from habitat.articulated_agents.humanoids import KinematicHumanoid
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -132,8 +133,9 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
-
-        return self._polar_pos
+        # TODO: This is a hack. For some reason _polar_pos in overriden by the other
+        # agent.
+        return self._polar_pos.copy()
 
 
 @registry.register_sensor
@@ -247,10 +249,12 @@ class HumanoidJointSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent.get_joint_transform()[0]
-        return np.array(joints_pos, dtype=np.float32)
+        curr_agent = self._sim.get_agent_data(self.agent_id).articulated_agent
+        if isinstance(curr_agent, KinematicHumanoid):
+            joints_pos = curr_agent.get_joint_transform()[0]
+            return np.array(joints_pos, dtype=np.float32)
+        else:
+            return np.zeros(self.observation_space.shape, dtype=np.float32)
 
 
 @registry.register_sensor
@@ -818,6 +822,25 @@ class NumStepsMeasure(Measure):
 
 
 @registry.register_measure
+class ZeroMeasure(Measure):
+    """
+    The number of steps elapsed in the current episode.
+    """
+
+    cls_uuid: str = "zero"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ZeroMeasure.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+
+    def update_metric(self, *args, **kwargs):
+        self._metric = 0
+
+
+@registry.register_measure
 class ForceTerminate(Measure):
     """
     If the accumulated force throughout this episode exceeds the limit.
@@ -1054,3 +1077,71 @@ class RuntimePerfStats(Measure):
             self._metric = {
                 k: np.mean(v) for k, v in self._metric_queue.items()
             }
+
+
+@registry.register_sensor
+class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_oracle_nav"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedOracleNavSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_oracle_nav_action"
+        else:
+            use_k = "oracle_nav_action"
+
+        if use_k not in self._task.actions:
+            return np.array(False, dtype=np.float32)[..., None]
+        else:
+            nav_action = self._task.actions[use_k]
+            return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
+@registry.register_sensor
+class HasFinishedHumanoidPickSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_human_pick"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedHumanoidPickSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_humanoid_pick_action"
+        else:
+            use_k = "humanoid_pick_action"
+
+        nav_action = self._task.actions[use_k]
+
+        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]

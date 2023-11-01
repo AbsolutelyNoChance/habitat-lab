@@ -11,7 +11,10 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 
 @registry.register_task(name="RearrangePickTask-v0")
@@ -35,7 +38,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self._base_angle_noise = self._config.base_angle_noise
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts
-        self._physics_stability_steps = self._config.physics_stability_steps
+        self._filter_colliding_states = self._config.filter_colliding_states
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -58,13 +61,13 @@ class RearrangePickTaskV1(RearrangeTask):
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
 
-        start_pos, angle_to_obj, was_fail = get_robot_spawns(
+        start_pos, angle_to_obj, was_fail = place_agent_at_dist_from_pos(
             targ_pos,
             self._base_angle_noise,
             self._spawn_max_dist_to_obj,
             sim,
             self._num_spawn_attempts,
-            self._physics_stability_steps,
+            self._filter_colliding_states,
         )
 
         if was_fail:

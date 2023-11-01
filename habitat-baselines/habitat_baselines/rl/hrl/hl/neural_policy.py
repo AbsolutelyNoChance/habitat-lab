@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
@@ -15,7 +14,11 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import CriticHead, PolicyActionData
+from habitat_baselines.rl.ppo.policy import (
+    CriticHead,
+    PolicyActionData,
+    get_aux_modules,
+)
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -27,10 +30,30 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     problem.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        config,
+        pddl_problem,
+        num_envs,
+        skill_name_to_idx,
+        observation_space,
+        action_space,
+        aux_loss_config,
+        agent_name,
+    ):
+        super().__init__(
+            config,
+            pddl_problem,
+            num_envs,
+            skill_name_to_idx,
+            observation_space,
+            action_space,
+            aux_loss_config,
+            agent_name,
+        )
         self._all_actions = self._setup_actions()
         self._n_actions = len(self._all_actions)
+        self._termination_obs_name = self._config.termination_obs_name
 
         use_obs_space = spaces.Dict(
             {
@@ -81,34 +104,43 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
+        self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
+
     @property
     def should_load_agent_state(self):
         return True
 
-    def _setup_actions(self) -> List[PddlAction]:
-        all_actions = self._pddl_prob.get_possible_actions()
-        all_actions = [
-            ac for ac in all_actions if ac.name in self._config.allowed_actions
-        ]
-        if not self._config.allow_other_place:
-            all_actions = [
-                ac
-                for ac in all_actions
-                if (
-                    ac.name != "place"
-                    or ac.param_values[0].name in ac.param_values[1].name
-                )
-            ]
-        return all_actions
+    def get_termination(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_skills,
+        log_info,
+    ):
+        if self._termination_obs_name is None:
+            return super().get_termination(
+                observations,
+                rnn_hidden_states,
+                prev_actions,
+                masks,
+                cur_skills,
+                log_info,
+            )
+        return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
 
-    def get_policy_action_space(
-        self, env_action_space: spaces.Space
-    ) -> spaces.Space:
+    @property
+    def policy_action_space(self) -> spaces.Space:
         return spaces.Discrete(self._n_actions)
 
     @property
     def num_recurrent_layers(self):
         return self._state_encoder.num_recurrent_layers
+
+    @property
+    def recurrent_hidden_size(self):
+        return self._hidden_size
 
     def parameters(self):
         return chain(
@@ -117,6 +149,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             self._policy.parameters(),
             self._state_encoder.parameters(),
             self._critic.parameters(),
+            self.aux_modules.parameters(),
         )
 
     def get_policy_components(self) -> List[nn.Module]:
@@ -162,13 +195,16 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         value = self._critic(features)
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
+        aux_loss_res = {
+            k: v(features, observations) for k, v in self.aux_modules.items()
+        }
 
         return (
             value,
             action_log_probs,
             distribution_entropy,
             rnn_hidden_states,
-            {},
+            aux_loss_res,
         )
 
     def get_next_skill(
@@ -181,9 +217,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         deterministic,
         log_info,
     ):
-        next_skill = torch.zeros(self._num_envs, dtype=torch.long)
-        skill_args_data: List[Any] = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = plan_masks.shape[0]
+        next_skill = torch.zeros(batch_size, dtype=torch.long)
+        skill_args_data: List[Any] = [None for _ in range(batch_size)]
+        immediate_end = torch.zeros(batch_size, dtype=torch.bool)
 
         state, rnn_hidden_states = self.forward(
             observations, rnn_hidden_states, masks

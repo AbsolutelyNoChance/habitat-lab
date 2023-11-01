@@ -14,8 +14,9 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns
+from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
+from habitat_sim.physics import VelocityControl
 
 
 @registry.register_task_action
@@ -37,7 +38,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
         elif self.motion_type == "human_joints":
             HumanoidJointAction.__init__(self, *args, **kwargs)
-            self.humanoid_controller = self.lazy_inst_humanoid_controller(task)
+            self.humanoid_controller = self.lazy_inst_humanoid_controller(
+                task, config
+            )
 
         else:
             raise ValueError("Unrecognized motion type for oracle nav  action")
@@ -47,6 +50,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._task.pddl_problem.get_ordered_entities_list()
         )
         self._prev_ep_id = None
+        self.skill_done = False
         self._targets = {}
 
     @staticmethod
@@ -58,7 +62,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             vel = [0, turn_vel]
         return vel
 
-    def lazy_inst_humanoid_controller(self, task):
+    def lazy_inst_humanoid_controller(self, task, config):
         # Lazy instantiation of humanoid controller
         # We assign the task with the humanoid controller, so that multiple actions can
         # use it.
@@ -76,8 +80,25 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             ].motion_data_path
 
             humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+            humanoid_controller.set_framerate_for_linspeed(
+                config["lin_speed"], config["ang_speed"], self._sim.ctrl_freq
+            )
             task.humanoid_controller = humanoid_controller
         return task.humanoid_controller
+
+    def _update_controller_to_navmesh(self):
+        base_offset = self.cur_articulated_agent.params.base_offset
+        prev_query_pos = self.cur_articulated_agent.base_pos
+        target_query_pos = (
+            self.humanoid_controller.obj_transform_base.translation
+            + base_offset
+        )
+
+        filtered_query_pos = self._sim.step_filter(
+            prev_query_pos, target_query_pos
+        )
+        fixup = filtered_query_pos - target_query_pos
+        self.humanoid_controller.obj_transform_base.translation += fixup
 
     @property
     def action_space(self):
@@ -98,6 +119,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if self._task._episode_id != self._prev_ep_id:
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
+            self.skill_done = False
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
@@ -105,19 +127,23 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            start_pos, _, _ = get_robot_spawns(
+            start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
                 self._config.spawn_max_dist_to_obj,
                 self._sim,
                 self._config.num_spawn_attempts,
-                1,
+                True,
+                self.cur_articulated_agent,
             )
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
-                    self.cur_articulated_agent.base_pos
+                    self.cur_articulated_agent.base_transformation
                 )
-            self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
+            self._targets[nav_to_target_idx] = (
+                np.array(start_pos),
+                np.array(obj_pos),
+            )
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):
@@ -138,6 +164,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         return path.points
 
     def step(self, *args, **kwargs):
+        self.skill_done = False
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
         ]
@@ -198,6 +225,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     vel = [0, 0]
+                    self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 BaseVelAction.step(self, *args, **kwargs)
                 return
@@ -218,6 +246,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()
+                    self.skill_done = True
 
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
@@ -230,3 +259,48 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"
                 )
+
+
+class SimpleVelocityControlEnv:
+    """
+    Simple velocity control environment for moving agent
+    """
+
+    def __init__(self, sim_freq=120.0):
+        # the velocity control
+        self.vel_control = VelocityControl()
+        self.vel_control.controlling_lin_vel = True
+        self.vel_control.controlling_ang_vel = True
+        self.vel_control.lin_vel_is_local = True
+        self.vel_control.ang_vel_is_local = True
+        self._sim_freq = sim_freq
+
+    def act(self, trans, vel):
+        linear_velocity = vel[0]
+        angular_velocity = vel[1]
+        # Map velocity actions
+        self.vel_control.linear_velocity = mn.Vector3(
+            [linear_velocity, 0.0, 0.0]
+        )
+        self.vel_control.angular_velocity = mn.Vector3(
+            [0.0, angular_velocity, 0.0]
+        )
+        # Compute the rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        # Get the target rigit state based on the simulation frequency
+        target_rigid_state = self.vel_control.integrate_transform(
+            1 / self._sim_freq, rigid_state
+        )
+        # Get the ending pos of the agent
+        end_pos = target_rigid_state.translation
+        # Offset the height
+        end_pos[1] = trans.translation[1]
+        # Construct the target trans
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+
+        return target_trans

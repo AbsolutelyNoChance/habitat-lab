@@ -12,33 +12,55 @@
 Habitat-Lab
 ==============================
 
-Habitat-Lab is a modular high-level library for end-to-end development in embodied AI --
-defining embodied AI tasks (e.g. navigation, rearrangement, instruction following, question answering), configuring embodied agents (physical form, sensors, capabilities), training these agents (via imitation or reinforcement learning, or no learning at all as in SensePlanAct pipelines), and benchmarking their performance on the defined tasks using standard metrics.
+Habitat-Lab is a modular high-level library for end-to-end development in embodied AI. It is designed to train agents to perform a wide variety of embodied AI tasks in indoor environments, as well as develop agents that can interact with humans in performing these tasks.
+
+Towards this goal, Habitat-Lab is designed to support the following features:
+
+- **Flexible task definitions**: allowing users to train agents in a wide variety of single and multi-agent tasks (e.g. navigation, rearrangement, instruction following, question answering, human following), as well as define novel tasks.
+- **Diverse embodied agents**: configuring and instantiating a diverse set of embodied agents, including commercial robots and humanoids, specifying their sensors and capabilities.
+- **Training and evaluating agents**: providing algorithms for single and multi-agent training (via imitation or reinforcement learning, or no learning at all as in SensePlanAct pipelines), as well as tools to benchmark their performance on the defined tasks using standard metrics.
+- **Human in the loop interaction**: providing a framework for humans to interact with the simulator, enabling to collect embodied data or interact with trained agents.
 
 Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim) as the core simulator. For documentation refer [here](https://aihabitat.org/docs/habitat-lab/).
 
 [![Habitat Demo](https://img.shields.io/static/v1?label=WebGL&message=Try%20AI%20Habitat%20In%20Your%20Browser%20&color=blue&logo=webgl&labelColor=%23990000&style=for-the-badge&link=https://aihabitat.org/demo)](https://aihabitat.org/demo)
+
 <p align="center">
-  <img src="res/img/habitat_compressed.gif"  height="400">
+  <img src="res/img/habitat3.gif" height="400">
+
 </p>
 
 ---
 
 ## Table of contents
-   1. [Citing Habitat](#citing-habitat)
-   1. [Installation](#installation)
-   1. [Testing](#testing)
-   1. [Documentation](#documentation)
-   1. [Docker Setup](#docker-setup)
-   1. [Datasets](#datasets)
-   1. [Baselines](#baselines)
-   1. [License](#license)
+- [Habitat-Lab](#habitat-lab)
+  - [Table of contents](#table-of-contents)
+  - [Citing Habitat](#citing-habitat)
+  - [Installation](#installation)
+  - [Testing](#testing)
+  - [Debugging an environment issue](#debugging-an-environment-issue)
+  - [Documentation](#documentation)
+  - [Docker Setup](#docker-setup)
+    - [Questions?](#questions)
+  - [Datasets](#datasets)
+  - [Baselines](#baselines)
+  - [ROS-X-Habitat](#ros-x-habitat)
+  - [License](#license)
 
 
 ## Citing Habitat
 If you use the Habitat platform in your research, please cite the [Habitat 1.0](https://arxiv.org/abs/1904.01201) and [Habitat 2.0](https://arxiv.org/abs/2106.14405) papers:
 
 ```
+@misc{puig2023habitat3,
+      title  = {Habitat 3.0: A Co-Habitat for Humans, Avatars and Robots},
+      author = {Xavi Puig and Eric Undersander and Andrew Szot and Mikael Dallaire Cote and Ruslan Partsey and Jimmy Yang and Ruta Desai and Alexander William Clegg and Michal Hlavac and Tiffany Min and Theo Gervet and Vladimír Vondruš and Vincent-Pierre Berges and John Turner and Oleksandr Maksymets and Zsolt Kira and Mrinal Kalakrishnan and Jitendra Malik and Devendra Singh Chaplot and Unnat Jain and Dhruv Batra and Akshara Rai and Roozbeh Mottaghi},
+      year={2023},
+      eprint={},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI}
+}
+
 @inproceedings{szot2021habitat,
   title     =     {Habitat 2.0: Training Home Assistants to Rearrange their Habitat},
   author    =     {Andrew Szot and Alex Clegg and Eric Undersander and Erik Wijmans and Yili Zhao and John Turner and Noah Maestre and Mustafa Mukadam and Devendra Chaplot and Oleksandr Maksymets and Aaron Gokaslan and Vladimir Vondrus and Sameer Dharur and Franziska Meier and Wojciech Galuba and Angel Chang and Zsolt Kira and Vladlen Koltun and Jitendra Malik and Manolis Savva and Dhruv Batra},
@@ -52,6 +74,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
   booktitle =     {Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)},
   year      =     {2019}
 }
+
 ```
 
 ## Installation
@@ -70,7 +93,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```
       conda install habitat-sim withbullet -c conda-forge -c aihabitat
       ```
-      See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
+      Note, for newer features added after the most recent release, you may need to install `aihabitat-nightly`. See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
 
 1. **pip install habitat-lab stable version**.
 
@@ -107,7 +130,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     python examples/example.py
     ```
 
-    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent. The script roughly does this:
+    which uses [`habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/skills/pick.yaml) for configuration of task and agent. The script roughly does this:
 
     ```python
     import gym
@@ -128,7 +151,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
     ```python
     config = habitat.get_config(
-      "benchmark/rearrange/pick.yaml",
+      "benchmark/rearrange/skills/pick.yaml",
       overrides=["habitat.environment.max_episode_steps=20"]
     )
     env = habitat.gym.make_gym_from_config(config)

@@ -80,7 +80,7 @@ except ImportError:
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -734,10 +734,8 @@ if __name__ == "__main__":
                     )
                 }
             )
-            if "composite_success" in task_config.measurements:
-                task_config.measurements.composite_success.must_call_stop = (
-                    False
-                )
+            if "pddl_success" in task_config.measurements:
+                task_config.measurements.pddl_success.must_call_stop = False
             if "rearrange_nav_to_obj_success" in task_config.measurements:
                 task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
                     False
@@ -769,7 +767,7 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
-        if task_config.type == "RearrangeCompositeTask-v0":
+        if task_config.type == "RearrangePddlTask-v0":
             task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     with habitat.Env(config=config) as env:

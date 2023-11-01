@@ -40,7 +40,13 @@ except ImportError:
 def setup_function(test_trainers):
     # Download the needed datasets
     data_downloader.main(
-        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+        [
+            "--uids",
+            "rearrange_task_assets",
+            "hab3_bench_assets",
+            "--no-replace",
+            "--no-prune",
+        ]
     )
 
 
@@ -57,44 +63,50 @@ def setup_function(test_trainers):
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
-        ),
-        (
-            "rearrange/rl_skill.yaml",
-            3,
-            ["benchmark/rearrange=open_cab"],
-        ),
-        (
-            "rearrange/rl_skill.yaml",
-            3,
             [
-                "benchmark/rearrange=open_fridge",
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=place",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
+            ["benchmark/rearrange/skills=open_cab"],
+        ),
+        (
+            "rearrange/rl_skill.yaml",
+            3,
+            [
+                "benchmark/rearrange/skills=open_fridge",
+            ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
                 "habitat.dataset.split=minival",
-                "benchmark/rearrange=nav_to_obj",
+                "benchmark/rearrange/skills=pick",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
             [
-                "benchmark/rearrange=close_fridge",
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange/skills=nav_to_obj",
             ],
         ),
         (
             "rearrange/rl_skill.yaml",
             3,
-            ["benchmark/rearrange=close_cab"],
+            [
+                "benchmark/rearrange/skills=close_fridge",
+            ],
+        ),
+        (
+            "rearrange/rl_skill.yaml",
+            3,
+            ["benchmark/rearrange/skills=close_cab"],
         ),
         (
             "imagenav/ddppo_imagenav_example.yaml",
@@ -253,8 +265,8 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             f"habitat_baselines.log_file={TRAIN_LOG_FILE}",
-            f"habitat_baselines/rl/policy={policy_type}",
-            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
+            f"habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent={policy_type}",
+            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills={skill_type}",
         ],
     )
     with read_write(config):
@@ -263,18 +275,85 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             skill_name,
             skill,
         ) in (
-            config.habitat_baselines.rl.policy.hierarchical_policy.defined_skills.items()
+            config.habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.items()
         ):
             if skill.load_ckpt_file == "":
                 continue
             skill.update(
                 {
-                    "force_config_file": f"benchmark/rearrange={skill_name}",
+                    "force_config_file": f"benchmark/rearrange/skills={skill_name}",
                     "max_skill_steps": 1,
                     "load_ckpt_file": "",
                 }
             )
         execute_exp(config, mode)
+
+
+@pytest.mark.skipif(
+    int(os.environ.get("TEST_BASELINE_SMALL", 0)) == 0,
+    reason="Full training tests did not run. Need `export TEST_BASELINE_SMALL=1",
+)
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "config_path",
+    [
+        "social_rearrange/pop_play.yaml",
+        "social_rearrange/plan_pop.yaml",
+        "social_nav/social_nav.yaml",
+    ],
+)
+def test_multi_agent_trainer(
+    config_path: str,
+):
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    # Setup the training
+    config = get_config(
+        config_path,
+        [
+            "habitat_baselines.num_updates=2",
+            "habitat_baselines.rl.ppo.num_mini_batch=1",
+            "habitat_baselines.num_environments=1",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            "habitat.dataset.data_path=data/hab3_bench_assets/episode_datasets/small_small.json.gz",
+            "habitat.simulator.agents.agent_1.articulated_agent_urdf=data/hab3_bench_assets/humanoids/female_0/female_0.urdf",
+            "habitat.simulator.agents.agent_1.motion_data_path=data/hab3_bench_assets/humanoids/female_0/female_0_motion_data_smplx.pkl",
+            "habitat.dataset.scenes_dir=data/hab3_bench_assets/hab3-hssd/",
+        ],
+    )
+
+    with read_write(config):
+        agent_config = get_agent_config(config.habitat.simulator)
+        # Changing the visual observation size for speed
+        for sim_sensor_config in agent_config.sim_sensors.values():
+            sim_sensor_config.update({"height": 64, "width": 64})
+
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
+    torch.backends.cudnn.deterministic = True
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
+        torch.set_num_threads(1)
+
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
+    trainer = trainer_init(config)
+
+    # Train
+    trainer.train()
+    # Training should complete without raising an error.
 
 
 @pytest.mark.skipif(

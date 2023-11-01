@@ -390,7 +390,7 @@ def generate_video(
     fps: int = 10,
     verbose: bool = True,
     keys_to_include_in_name: Optional[List[str]] = None,
-) -> None:
+) -> str:
     r"""Generate video according to specified information.
 
     Args:
@@ -404,10 +404,10 @@ def generate_video(
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.
     Returns:
-        None
+        The saved video name.
     """
     if len(images) < 1:
-        return
+        return ""
 
     metric_strs = []
     if (
@@ -439,6 +439,7 @@ def generate_video(
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
+    return video_name
 
 
 def tensor_to_depth_images(
@@ -684,9 +685,14 @@ def iterate_action_space_recursively(action_space):
 
 
 def is_continuous_action_space(action_space) -> bool:
+    possible_discrete_spaces = (
+        spaces.Discrete,
+        spaces.MultiDiscrete,
+        spaces.Dict,
+    )
     if isinstance(action_space, spaces.Box):
         return True
-    elif isinstance(action_space, (spaces.Discrete, spaces.MultiDiscrete)):
+    elif isinstance(action_space, possible_discrete_spaces):
         return False
     else:
         raise NotImplementedError(
@@ -708,6 +714,15 @@ def get_action_space_info(ac_space: spaces.Space) -> Tuple[Tuple[int], bool]:
             ),
             False,
         )
+
+    elif isinstance(ac_space, spaces.MultiDiscrete):
+        return ac_space.shape, True
+    elif isinstance(ac_space, spaces.Dict):
+        num_actions = 0
+        for _, ac_sub_space in ac_space.items():
+            num_actions += get_action_space_info(ac_sub_space)[0][0]
+        return (num_actions,), True
+
     else:
         # For discrete pointnav
         return (1,), True

@@ -18,7 +18,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
@@ -62,7 +65,7 @@ class PddlRobotState:
     :property place_at_angle_thresh: The required maximum angle to the target
         entity in the robot's local frame. Specified in radains. If not specified,
         no angle is considered.
-    :property physics_stability_steps: Number of physics checks for placing the
+    :property filter_colliding_states: Whether or not to filter colliding states when placing the
         robot. If not set, sets to task default.
     """
 
@@ -72,7 +75,7 @@ class PddlRobotState:
     place_at_pos_dist: Optional[float] = None
     place_at_angle_thresh: Optional[float] = None
     base_angle_noise: Optional[float] = None
-    physics_stability_steps: Optional[int] = None
+    filter_colliding_states: Optional[bool] = None
 
     def get_place_at_pos_dist(self, sim_info) -> float:
         if self.place_at_pos_dist is None:
@@ -85,11 +88,11 @@ class PddlRobotState:
             return 0.0
         return self.base_angle_noise
 
-    def get_physics_stability_steps(self, sim_info) -> Optional[int]:
-        if self.physics_stability_steps is None:
-            return sim_info.physics_stability_steps
+    def get_filter_colliding_states(self, sim_info) -> Optional[bool]:
+        if self.filter_colliding_states is None:
+            return sim_info.filter_colliding_states
         else:
-            return self.physics_stability_steps
+            return self.filter_colliding_states
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -141,10 +144,12 @@ class PddlRobotState:
             T = robot.base_transformation
             # Do transformation
             pos = T.inverted().transform_point(targ_pos)
-            # Compute distance
-            dist = np.linalg.norm(pos)
             # Project to 2D plane (x,y,z=0)
             pos[2] = 0.0
+
+            # Compute distance
+            dist = np.linalg.norm(pos)
+
             # Unit vector of the pos
             pos = pos.normalized()
             # Define the coordinate of the robot
@@ -193,7 +198,7 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
 
             # Place some distance away from the object.
-            start_pos, start_rot, was_fail = get_robot_spawns(
+            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 target_position=targ_pos,
                 rotation_perturbation_noise=self.get_base_angle_noise(
                     sim_info
@@ -201,7 +206,7 @@ class PddlRobotState:
                 distance_threshold=self.get_place_at_pos_dist(sim_info),
                 sim=sim,
                 num_spawn_attempts=sim_info.num_spawn_attempts,
-                physics_stability_steps=self.get_physics_stability_steps(
+                filter_colliding_states=self.get_filter_colliding_states(
                     sim_info
                 ),
                 agent=agent_data.articulated_agent,
@@ -282,27 +287,6 @@ class PddlSimState:
         }
         return self
 
-    def _is_object_inside(
-        self, entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
-    ) -> bool:
-        """
-        Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
-        """
-        entity_pos = sim_info.get_entity_pos(entity)
-        check_marker = cast(
-            MarkerInfo,
-            sim_info.search_for_entity(target),
-        )
-        if sim_info.check_type_matches(target, FRIDGE_TYPE):
-            global_bb = get_ao_global_bb(check_marker.ao_parent)
-        else:
-            bb = check_marker.link_node.cumulative_bb
-            global_bb = habitat_sim.geo.get_transformed_bb(
-                bb, check_marker.link_node.transformation
-            )
-
-        return global_bb.contains(entity_pos)
-
     def is_compatible(self, expr_types) -> bool:
         def type_matches(entity, match_names):
             return any(
@@ -311,17 +295,20 @@ class PddlSimState:
             )
 
         for entity, target in self._obj_states.items():
+            # We have to be able to move the source object.
             if not type_matches(
                 entity, [SimulatorObjectType.MOVABLE_ENTITY.value]
             ):
                 return False
 
+            # All targets must refer to 1 of the predefined types.
             if not (
                 type_matches(
                     target,
                     [
                         SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value,
                         SimulatorObjectType.GOAL_ENTITY.value,
+                        SimulatorObjectType.MOVABLE_ENTITY.value,
                         SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value,
                     ],
                 )
@@ -331,6 +318,7 @@ class PddlSimState:
             if entity.expr_type.name == target.expr_type.name:
                 return False
 
+        # All the receptacle state entities must refer to receptacles.
         return all(
             type_matches(
                 art_entity,
@@ -349,64 +337,18 @@ class PddlSimState:
         """
 
         # Check object states.
-        rom = sim_info.sim.get_rigid_object_manager()
         for entity, target in self._obj_states.items():
-            if not sim_info.check_type_matches(
-                entity, SimulatorObjectType.MOVABLE_ENTITY.value
-            ):
-                raise ValueError(f"Got unexpected entity {entity}")
-            obj_idx = cast(int, sim_info.search_for_entity(entity))
-            abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
-            entity_obj = rom.get_object_by_id(abs_obj_id)
-
-            if sim_info.check_type_matches(
-                target, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
-            ):
-                # object is rigid and target is receptacle, we are checking if
-                # an object is inside of a receptacle.
-                if not self._is_object_inside(entity, target, sim_info):
-                    return False
-            elif sim_info.check_type_matches(
-                target, SimulatorObjectType.GOAL_ENTITY.value
-            ):
-                cur_pos = entity_obj.transformation.translation
-
-                targ_idx = cast(
-                    int,
-                    sim_info.search_for_entity(target),
-                )
-                idxs, pos_targs = sim_info.sim.get_targets()
-                targ_pos = pos_targs[list(idxs).index(targ_idx)]
-
-                dist = np.linalg.norm(cur_pos - targ_pos)
-                if dist >= sim_info.obj_thresh:
-                    return False
-            elif sim_info.check_type_matches(
-                target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
-            ):
-                recep = cast(mn.Range3D, sim_info.search_for_entity(target))
-                return recep.contains(entity_obj.translation)
-            else:
-                raise ValueError(
-                    f"Got unexpected combination of {entity} and {target}"
-                )
+            return all(
+                _is_obj_state_true(entity, target, sim_info)
+                for entity, target in self._obj_states.items()
+            )
 
         for art_entity, set_art in self._art_states.items():
-            if not sim_info.check_type_matches(
-                art_entity,
-                SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value,
-            ):
-                raise ValueError(f"Got unexpected entity {set_art}")
-
-            marker = cast(
-                MarkerInfo,
-                sim_info.search_for_entity(
-                    art_entity,
-                ),
+            return all(
+                _is_art_state_true(art_entity, set_art, sim_info)
+                for art_entity, set_art in self._art_states.items()
             )
-            prev_art_pos = marker.get_targ_js()
-            if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
-                return False
+
         return all(
             robot_state.is_true(sim_info, robot_entity)
             for robot_entity, robot_state in self._robot_states.items()
@@ -416,56 +358,9 @@ class PddlSimState:
         """
         Set this state in the simulator. Warning, this steps the simulator.
         """
-        sim = sim_info.sim
         # Set all desired object states.
         for entity, target in self._obj_states.items():
-            if not sim_info.check_type_matches(
-                entity, SimulatorObjectType.MOVABLE_ENTITY.value
-            ):
-                raise ValueError(f"Got unexpected entity {entity}")
-
-            if sim_info.check_type_matches(
-                target, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
-            ):
-                raise NotImplementedError()
-            elif sim_info.check_type_matches(
-                target, SimulatorObjectType.GOAL_ENTITY.value
-            ):
-                targ_idx = cast(
-                    int,
-                    sim_info.search_for_entity(target),
-                )
-                all_targ_idxs, pos_targs = sim.get_targets()
-                targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
-                set_T = mn.Matrix4.translation(targ_pos)
-            elif sim_info.check_type_matches(
-                target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
-            ):
-                # Place object on top of receptacle.
-                recep = cast(mn.Range3D, sim_info.search_for_entity(target))
-
-                # Divide by 2 because the `from_center` creates from the half size.
-                shrunk_recep = mn.Range3D.from_center(
-                    recep.center(),
-                    (recep.size() / 2.0) * sim_info.recep_place_shrink_factor,
-                )
-                pos = np.random.uniform(shrunk_recep.min, shrunk_recep.max)
-                set_T = mn.Matrix4.translation(pos)
-            else:
-                raise ValueError(f"Got unexpected target {target}")
-
-            obj_idx = cast(int, sim_info.search_for_entity(entity))
-            abs_obj_id = sim.scene_obj_ids[obj_idx]
-
-            # Get the object id corresponding to this name
-            rom = sim.get_rigid_object_manager()
-            set_obj = rom.get_object_by_id(abs_obj_id)
-            set_obj.transformation = set_T
-            set_obj.angular_velocity = mn.Vector3.zero_init()
-            set_obj.linear_velocity = mn.Vector3.zero_init()
-            sim.internal_step(-1)
-            set_obj.angular_velocity = mn.Vector3.zero_init()
-            set_obj.linear_velocity = mn.Vector3.zero_init()
+            _set_obj_state(entity, target, sim_info)
 
         # Set all desired articulated object states.
         for art_entity, set_art in self._art_states.items():
@@ -518,3 +413,159 @@ class PddlSimState:
         # Set all desired robot states.
         for robot_entity, robot_state in self._robot_states.items():
             robot_state.set_state(sim_info, robot_entity)
+
+
+def _is_object_inside(
+    entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
+) -> bool:
+    """
+    Returns if `entity` is inside of `target` in the CURRENT simulator state, NOT at the start of the episode.
+    """
+    entity_pos = sim_info.get_entity_pos(entity)
+    check_marker = cast(
+        MarkerInfo,
+        sim_info.search_for_entity(target),
+    )
+    if sim_info.check_type_matches(target, FRIDGE_TYPE):
+        global_bb = get_ao_global_bb(check_marker.ao_parent)
+    else:
+        bb = check_marker.link_node.cumulative_bb
+        global_bb = habitat_sim.geo.get_transformed_bb(
+            bb, check_marker.link_node.transformation
+        )
+
+    return global_bb.contains(entity_pos)
+
+
+def _is_obj_state_true(entity, target, sim_info) -> bool:
+    entity_pos = sim_info.get_entity_pos(entity)
+
+    if sim_info.check_type_matches(
+        target, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
+    ):
+        # object is rigid and target is receptacle, we are checking if
+        # an object is inside of a receptacle.
+        if not _is_object_inside(entity, target, sim_info):
+            return False
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.GOAL_ENTITY.value
+    ):
+        targ_idx = cast(
+            int,
+            sim_info.search_for_entity(target),
+        )
+        idxs, pos_targs = sim_info.sim.get_targets()
+        targ_pos = pos_targs[list(idxs).index(targ_idx)]
+
+        dist = np.linalg.norm(entity_pos - targ_pos)
+        if dist >= sim_info.obj_thresh:
+            return False
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+    ):
+        recep = cast(mn.Range3D, sim_info.search_for_entity(target))
+        return recep.contains(entity_pos)
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.MOVABLE_ENTITY.value
+    ):
+        raise NotImplementedError()
+    else:
+        raise ValueError(
+            f"Got unexpected combination of {entity} and {target}"
+        )
+    return True
+
+
+def _is_art_state_true(art_entity, set_art, sim_info) -> bool:
+    if not sim_info.check_type_matches(
+        art_entity,
+        SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value,
+    ):
+        raise ValueError(f"Got unexpected entity {set_art}")
+
+    marker = cast(
+        MarkerInfo,
+        sim_info.search_for_entity(
+            art_entity,
+        ),
+    )
+    prev_art_pos = marker.get_targ_js()
+    if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
+        return False
+    return True
+
+
+def _place_obj_on_goal(
+    target: PddlEntity, sim_info: PddlSimInfo
+) -> mn.Matrix4:
+    sim = sim_info.sim
+    targ_idx = cast(
+        int,
+        sim_info.search_for_entity(target),
+    )
+    all_targ_idxs, pos_targs = sim.get_targets()
+    targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
+    return mn.Matrix4.translation(targ_pos)
+
+
+def _place_obj_on_obj(
+    entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
+) -> mn.Matrix4:
+    raise NotImplementedError()
+
+
+def _place_obj_on_recep(target: PddlEntity, sim_info) -> mn.Matrix4:
+    # Place object on top of receptacle.
+    recep = cast(mn.Range3D, sim_info.search_for_entity(target))
+
+    # Divide by 2 because the `from_center` creates from the half size.
+    shrunk_recep = mn.Range3D.from_center(
+        recep.center(),
+        (recep.size() / 2.0) * sim_info.recep_place_shrink_factor,
+    )
+    pos = np.random.uniform(shrunk_recep.min, shrunk_recep.max)
+    return mn.Matrix4.translation(pos)
+
+
+def _set_obj_state(
+    entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
+) -> None:
+    sim = sim_info.sim
+
+    # The source object must be movable.
+    if not sim_info.check_type_matches(
+        entity, SimulatorObjectType.MOVABLE_ENTITY.value
+    ):
+        raise ValueError(f"Got unexpected entity {entity}")
+
+    if sim_info.check_type_matches(
+        target, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
+    ):
+        raise NotImplementedError()
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.GOAL_ENTITY.value
+    ):
+        set_T = _place_obj_on_goal(target, sim_info)
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+    ):
+        set_T = _place_obj_on_recep(target, sim_info)
+    elif sim_info.check_type_matches(
+        target, SimulatorObjectType.MOVABLE_ENTITY.value
+    ):
+        set_T = _place_obj_on_obj(entity, target, sim_info)
+    else:
+        raise ValueError(f"Got unexpected target {target}")
+
+    obj_idx = cast(int, sim_info.search_for_entity(entity))
+    abs_obj_id = sim.scene_obj_ids[obj_idx]
+
+    # Get the object id corresponding to this name
+    rom = sim.get_rigid_object_manager()
+    set_obj = rom.get_object_by_id(abs_obj_id)
+    set_obj.transformation = set_T
+    set_obj.angular_velocity = mn.Vector3.zero_init()
+    set_obj.linear_velocity = mn.Vector3.zero_init()
+    sim.internal_step(-1)
+    set_obj.angular_velocity = mn.Vector3.zero_init()
+    set_obj.linear_velocity = mn.Vector3.zero_init()

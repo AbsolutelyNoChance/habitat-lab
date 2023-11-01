@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Optional
+from typing import Optional, cast
 
 import magnum as mn
 import numpy as np
@@ -29,6 +29,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
+from habitat_sim.physics import MotionType
 
 
 @registry.register_task_action
@@ -72,23 +73,27 @@ class ArmAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        arm_controller_cls = eval(self._config.arm_controller)
+        arm_controller_cls = registry.get_task_action(
+            self._config.arm_controller
+        )
         self._sim: RearrangeSim = sim
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
 
         if self._config.grip_controller is not None:
-            grip_controller_cls = eval(self._config.grip_controller)
-            self.grip_ctrlr: Optional[
-                GripSimulatorTaskAction
-            ] = grip_controller_cls(*args, config=config, sim=sim, **kwargs)
+            grip_controller_cls = registry.get_task_action(
+                self._config.grip_controller
+            )
+            self.grip_ctrlr: Optional[GripSimulatorTaskAction] = cast(
+                GripSimulatorTaskAction,
+                grip_controller_cls(*args, config=config, sim=sim, **kwargs),
+            )
+            assert isinstance(self.grip_ctrlr, GripSimulatorTaskAction)
         else:
             self.grip_ctrlr = None
 
-        self.disable_grip = False
-        if "disable_grip" in config:
-            self.disable_grip = config["disable_grip"]
+        self.disable_grip = config.disable_grip
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
@@ -142,9 +147,13 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
         # The actual joint positions
         self._sim: RearrangeSim
-        self.cur_articulated_agent.arm_motor_pos = (
-            delta_pos + self.cur_articulated_agent.arm_motor_pos
-        )
+        if (
+            self.cur_articulated_agent.sim_obj.motion_type
+            == MotionType.DYNAMIC
+        ):
+            self.cur_articulated_agent.arm_motor_pos = (
+                delta_pos + self.cur_articulated_agent.arm_motor_pos
+            )
 
 
 @registry.register_task_action
@@ -470,6 +479,9 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
         self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._enable_rotation_check_for_dyn_slide = (
+            self._config.enable_rotation_check_for_dyn_slide
+        )
         self._allow_back = self._config.allow_back
         self._collision_threshold = self._config.collision_threshold
         self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
@@ -574,7 +586,9 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         )
         # We do sliding only if we allow the robot to do sliding and current
         # robot is not rotating
-        compute_sliding = self._allow_dyn_slide and not if_rotation
+        compute_sliding = self._allow_dyn_slide and not (
+            if_rotation and self._enable_rotation_check_for_dyn_slide
+        )
         # Check if there is a collision
         did_coll, new_target_trans = self.collision_check(
             trans, target_trans, target_rigid_state, compute_sliding
@@ -707,10 +721,10 @@ class HumanoidJointAction(ArticulatedAgentAction):
         # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
         return spaces.Dict(
             {
-                "human_joints_trans": spaces.Box(
-                    shape=(4 * num_joints + num_dim_transform,),
-                    low=-1,
-                    high=1,
+                f"{self._action_arg_prefix}human_joints_trans": spaces.Box(
+                    shape=(4 * num_joints + num_dim_transform * 2,),
+                    low=-np.inf,
+                    high=np.inf,
                     dtype=np.float32,
                 )
             }
@@ -730,7 +744,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
         human_joints_trans = kwargs[
             self._action_arg_prefix + "human_joints_trans"
         ]
-        new_joints = human_joints_trans[:-16]
+        new_joints = human_joints_trans[:-32]
         new_pos_transform_base = human_joints_trans[-16:]
         new_pos_transform_offset = human_joints_trans[-32:-16]
 

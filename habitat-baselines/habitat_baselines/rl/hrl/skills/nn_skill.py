@@ -80,10 +80,6 @@ class NnSkillPolicy(SkillPolicy):
             return []
 
     @property
-    def has_hidden_state(self):
-        return self.num_recurrent_layers != 0
-
-    @property
     def num_recurrent_layers(self):
         if self._wrap_policy is not None:
             return self._wrap_policy.net.num_recurrent_layers
@@ -103,6 +99,7 @@ class NnSkillPolicy(SkillPolicy):
         observations,
         rnn_hidden_states,
         prev_actions,
+        skill_name,
     ):
         ret = super().on_enter(
             skill_arg,
@@ -110,6 +107,7 @@ class NnSkillPolicy(SkillPolicy):
             observations,
             rnn_hidden_states,
             prev_actions,
+            skill_name,
         )
         self._did_want_done *= 0.0
         return ret

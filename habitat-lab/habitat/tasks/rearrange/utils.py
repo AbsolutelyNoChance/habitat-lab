@@ -198,7 +198,16 @@ def convert_legacy_cfg(obj_list):
     return list(map(convert_fn, obj_list))
 
 
-def get_aabb(obj_id, sim, transformed=False):
+def get_rigid_aabb(
+    obj_id: int, sim: habitat_sim.Simulator, transformed: bool = False
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a RigidObject. Returns None if object is not found.
+
+    :param obj_id: The unique id of the object instance.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
     obj = sim.get_rigid_object_manager().get_object_by_id(obj_id)
     if obj is None:
         return None
@@ -209,6 +218,34 @@ def get_aabb(obj_id, sim, transformed=False):
             obj_node.cumulative_bb, obj_node.transformation
         )
     return obj_bb
+
+
+def get_ao_link_aabb(
+    ao_obj_id: int,
+    link_id: int,
+    sim: habitat_sim.Simulator,
+    transformed: bool = False,
+) -> Optional[mn.Range3D]:
+    """
+    Get the AABB for a link of an ArticulatedObject. Returns None if object or link are not found.
+
+    :param ao_obj_id: The unique id of the ArticulatedObject instance.
+    :param link_id: The index of the link within the ArticulatedObject instance. -1 for base link. Note this is not unique object_id of the link.
+    :param sim: The Simulator instance owning the object instance.
+    :param transformed: If True, transform the AABB into global space.
+    """
+
+    ao = sim.get_articulated_object_manager().get_object_by_id(ao_obj_id)
+    if ao is None:
+        return None
+    assert link_id < ao.num_links, "Link index out of range."
+    link_node = ao.get_link_scene_node(link_id)
+    link_bb = link_node.cumulative_bb
+    if transformed:
+        link_bb = habitat_sim.geo.get_transformed_bb(
+            link_bb, link_node.absolute_transformation()
+        )
+    return link_bb
 
 
 def euler_to_quat(rpy):
@@ -389,15 +426,129 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
         text_file.write(gfx_keyframe_str)
 
 
-def get_robot_spawns(
+def place_agent_at_dist_from_pos(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
     sim,
     num_spawn_attempts: int,
-    physics_stability_steps: int,
+    filter_colliding_states: bool,
     agent: Optional[MobileManipulator] = None,
-) -> Tuple[np.ndarray, float, bool]:
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
+):
+    """
+    Places the robot at closest point if distance_threshold is -1.0 otherwise
+    will place the robot at `distance_threshold` away.
+    """
+    if distance_threshold == -1.0:
+        if navmesh_offset is not None:
+            return place_robot_at_closest_point_with_navmesh(
+                target_position, sim, navmesh_offset, agent=agent
+            )
+        else:
+            return _place_robot_at_closest_point(
+                target_position, sim, agent=agent
+            )
+    else:
+        return _get_robot_spawns(
+            target_position,
+            rotation_perturbation_noise,
+            distance_threshold,
+            sim,
+            num_spawn_attempts,
+            filter_colliding_states,
+            agent=agent,
+        )
+
+
+def _place_robot_at_closest_point(
+    target_position: np.ndarray,
+    sim,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Gets the agent's position and orientation at the closest point to the target position.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    """
+    if agent is None:
+        agent = sim.articulated_agent
+
+    agent_pos = sim.safe_snap_point(target_position)
+    if not sim.is_point_within_bounds(target_position):
+        rearrange_logger.error(
+            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
+        )
+    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+
+    return agent_pos, desired_angle, False
+
+
+def place_robot_at_closest_point_with_navmesh(
+    target_position: np.ndarray,
+    sim,
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Gets the agent's position and orientation at the closest point to the target position.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    """
+    if agent is None:
+        agent = sim.articulated_agent
+
+    agent_pos = sim.safe_snap_point(target_position)
+    if not sim.is_point_within_bounds(target_position):
+        rearrange_logger.error(
+            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
+        )
+    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+
+    # Cache the initial location of the agent
+    cache_pos = agent.base_pos
+    # Make a copy of agent trans
+    trans = mn.Matrix4(agent.sim_obj.transformation)
+
+    # Set the base pos of the agent
+    trans.translation = agent_pos
+    # Project the nav pos
+    nav_pos_3d = [
+        np.array([xz[0], cache_pos[1], xz[1]]) for xz in navmesh_offset
+    ]
+    # Do transformation to get the location
+    center_pos_list = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+    for center_pos in center_pos_list:
+        # Update the transformation of the agent
+        trans.translation = center_pos
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        # Project the height
+        cur_pos = [np.array([xz[0], cache_pos[1], xz[2]]) for xz in cur_pos]
+
+        is_collision = False
+        for pos in cur_pos:
+            if not sim.pathfinder.is_navigable(pos):
+                is_collision = True
+                break
+
+        if not is_collision:
+            return (
+                np.array(center_pos),
+                agent.base_rot,
+                False,
+            )
+
+    return agent_pos, desired_angle, False
+
+
+def _get_robot_spawns(
+    target_position: np.ndarray,
+    rotation_perturbation_noise: float,
+    distance_threshold: float,
+    sim,
+    num_spawn_attempts: int,
+    filter_colliding_states: bool,
+    agent: Optional[MobileManipulator] = None,
+) -> Tuple[mn.Vector3, float, bool]:
     """
     Attempts to place the robot near the target position, facing towards it.
     This does NOT set the position or angle of the robot, even if a place is
@@ -407,65 +558,53 @@ def get_robot_spawns(
         necessarily on the navmesh.
     :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
     :param distance_threshold: The maximum distance from the target.
-    :param sim: The simulator instance.
+    :param sim: The RearrangeSimulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
-    :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
-    :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
+    :param filter_colliding_states: Whether or not to filter out states in which the robot is colliding with the scene. If True, runs discrete collision detection, otherwise returns the sampled state without checking.
+    :param agent: The agent to get the state for. If not specified, defaults to the simulator's articulated agent.
 
-    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    :return: The robot's sampled spawn state (position, rotation) if successful (otherwise returns current state), and whether the placement was a failure (True for failure, False for success).
     """
+    assert (
+        distance_threshold > 0.0
+    ), f"Distance threshold must be positive, got {distance_threshold=}. You might want `place_agent_at_dist_from_pos` instead."
     if agent is None:
         agent = sim.articulated_agent
+
     start_rotation = agent.base_rot
     start_position = agent.base_pos
 
-    state = sim.capture_state()
-
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
-        sim.set_state(state)
+        # Place within `distance_threshold` of the object.
+        agent.base_pos = sim.pathfinder.get_random_navigable_point_near(
+            target_position,
+            distance_threshold,
+            island_index=sim.largest_island_idx,
+        )
+        # get_random_navigable_point_near() can return NaNs for start_position.
+        # We want to make sure that the generated start_position is valid
+        if np.isnan(agent.base_pos).any():
+            continue
 
-        if distance_threshold == -1.0:
-            # Place as close to the object as possible.
-            if not sim.is_point_within_bounds(target_position):
-                rearrange_logger.error(
-                    f"Object {target_position} is out of bounds but trying to set robot position"
-                )
+        # get the horizontal distance (XZ planar projection) to the target position
+        hor_disp = agent.base_pos - target_position
+        hor_disp[1] = 0
+        target_distance = hor_disp.length()
 
-            start_position = sim.safe_snap_point(target_position)
-        else:
-            # Place within `distance_threshold` of the object.
-            start_position = sim.pathfinder.get_random_navigable_point_near(
-                target_position, distance_threshold
-            )
+        if target_distance > distance_threshold:
+            continue
+
         # Face the robot towards the object.
-        relative_target = target_position - start_position
+        relative_target = target_position - agent.base_pos
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
+        agent.base_rot = angle_to_object + rotation_noise
 
-        if physics_stability_steps == 0:
-            return start_position, start_rotation, False
-
-        island_idx = sim.pathfinder.get_island(start_position)
-        if island_idx != sim.largest_island_idx:
-            continue
-
-        target_distance = np.linalg.norm(
-            (start_position - target_position)[[0, 2]]
-        )
-
-        is_navigable = sim.pathfinder.is_navigable(start_position)
-
-        if target_distance > distance_threshold or not is_navigable:
-            continue
-
-        agent.base_pos = start_position
-        agent.base_rot = start_rotation
-
-        # Make sure the robot is not colliding with anything in this
-        # position.
-        for _ in range(physics_stability_steps):
+        is_feasible_state = True
+        if filter_colliding_states:
+            # Make sure the robot is not colliding with anything in this
+            # position.
             sim.perform_discrete_collision_detection()
             _, details = rearrange_collision(
                 sim,
@@ -474,16 +613,19 @@ def get_robot_spawns(
             )
 
             # Only care about collisions between the robot and scene.
-            did_collide = details.robot_scene_colls != 0
+            is_feasible_state = details.robot_scene_colls == 0
 
-            if did_collide:
-                break
+        if is_feasible_state:
+            propsed_pos = agent.base_pos
+            proposed_rot = agent.base_rot
+            # found a feasbile state: reset state and return proposed stated
+            agent.base_pos = start_position
+            agent.base_rot = start_rotation
+            return propsed_pos, proposed_rot, False
 
-        if not did_collide:
-            sim.set_state(state)
-            return start_position, start_rotation, False
-
-    sim.set_state(state)
+    # failure to sample a feasbile state: reset state and return initial conditions
+    agent.base_pos = start_position
+    agent.base_rot = start_rotation
     return start_position, start_rotation, True
 
 
