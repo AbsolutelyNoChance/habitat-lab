@@ -20,8 +20,8 @@ habitat_baselines:
   num_environments: 1
   checkpoint_folder: "data/unreal_checkpoints"
   num_updates: -1
-  total_num_steps: 75e6
   log_interval: 25
+  total_num_steps: 75e4
   num_checkpoints: 100
   # Force PyTorch to be single threaded as
   # this improves performance considerably
