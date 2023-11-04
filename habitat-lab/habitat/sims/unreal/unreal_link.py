@@ -117,3 +117,19 @@ class UnrealLink:
             return distance
         except Exception as e:
             print(f"Could not compute geodesic distance! {e}")
+
+    async def query_closest_obstacle_distance(
+        self, position, max_detection_radius
+    ):
+        # TODO error check? make new json field to detect errors or stop?
+        payload = f"closest_obstacle_distance {' '.join(map(str, position))} {str(max_detection_radius)}"
+        queried_distance = await self.__send_packet(payload)
+        # print(f"{payload=}")
+
+        try:
+            distance = float(queried_distance)
+            if distance == -1.0:
+                raise Exception("Invalid query!")
+            return distance
+        except Exception as e:
+            print(f"Could not compute distance to closest obstacle! {e}")

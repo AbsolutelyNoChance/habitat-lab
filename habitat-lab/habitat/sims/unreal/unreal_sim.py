@@ -372,6 +372,18 @@ class UnrealSimulator(Simulator):
 
         return distance
 
+    def distance_to_closest_obstacle(
+        self, position: np.ndarray, max_detection_radius: float
+    ):
+        loop = asyncio.get_event_loop()
+        distance = loop.run_until_complete(
+            self.client.query_closest_obstacle_distance(
+                position, max_detection_radius
+            )
+        )
+
+        return distance
+
     def get_agent_state(
         self, agent_id: int = 0, base_state_type: str = "odom"
     ):
