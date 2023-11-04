@@ -16,9 +16,9 @@ habitat_baselines:
   video_dir: "video_dir"
   # Evaluate on all episodes
   test_episode_count: -1
-  eval_ckpt_path_dir: "data/new_checkpoints"
+  eval_ckpt_path_dir: "data/unreal_checkpoints"
   num_environments: 1
-  checkpoint_folder: "data/new_checkpoints"
+  checkpoint_folder: "data/unreal_checkpoints"
   num_updates: -1
   total_num_steps: 75e6
   log_interval: 25
