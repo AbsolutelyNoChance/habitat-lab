@@ -70,12 +70,12 @@ class ObservationsSingleton(metaclass=Singleton):
 
             image = base64.b64decode(value)
 
-            if key == "FinalImage":
-                f = open(f"{key}.jpg", "wb")
-            else:
-                f = open(f"{key}.png", "wb")
-            f.write(image)
-            f.close()
+            # if key == "FinalImage":
+            #    f = open(f"{key}.jpg", "wb")
+            # else:
+            #    f = open(f"{key}.png", "wb")
+            # f.write(image)
+            # f.close()
 
             image = np.asarray(bytearray(image), dtype="uint8")
 
