@@ -64,9 +64,9 @@ class ObservationsSingleton(metaclass=Singleton):
                 # not an image
                 if key in ["_location", "_rotation"]:
                     self.buffers[key] = [float(i) for i in value.split(" ")]
-                else if key == "_previous_step_reset":
+                elif key == "_previous_step_reset":
                     self.buffers[key] = value == "True"
-                else if key == "_previous_step_reset_reason":
+                elif key == "_previous_step_reset_reason":
                     self.buffers[key] = value
                 else:
                     print("Unknown Observation")
