@@ -64,9 +64,13 @@ class ObservationsSingleton(metaclass=Singleton):
                 # not an image
                 if key in ["_location", "_rotation"]:
                     self.buffers[key] = [float(i) for i in value.split(" ")]
-                else:
+                else if key == "_previous_step_reset":
                     self.buffers[key] = value == "True"
-                continue
+                else if key == "_previous_step_reset_reason":
+                    self.buffers[key] = value
+                else:
+                    print("Unknown Observation")
+                    exit()
 
             image = base64.b64decode(value)
 
@@ -109,6 +113,9 @@ class ObservationsSingleton(metaclass=Singleton):
                 display_rgb(image)
             elif DISPLAY_DEPTH and "Depth" in key:
                 display_rgb(image)
+
+            if self.buffers[key]:
+                print(f"Previous action resulted in a reset because of: {self.buffers['_previous_step_reset_reason']}")
 
         # print(f"Got observations: {', '.join([k for k in obj.keys()])}")
 

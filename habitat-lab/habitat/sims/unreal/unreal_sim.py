@@ -351,7 +351,9 @@ class UnrealSimulator(Simulator):
         :return: :py:`True` if the previous step resulted in a collision,
             :py:`False` otherwise
         """
-        return Observations["_previous_step_collided"]
+
+        #TODO define list of possible reasons
+        return Observations["_previous_step_reset"] and Observations["_previous_step_reset_reason"] == "Hit obstacle"
 
     def geodesic_distance(
         self,
