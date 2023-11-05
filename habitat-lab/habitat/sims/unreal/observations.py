@@ -71,6 +71,7 @@ class ObservationsSingleton(metaclass=Singleton):
                 else:
                     print("Unknown Observation")
                     exit()
+                continue
 
             image = base64.b64decode(value)
 
