@@ -114,7 +114,7 @@ class ObservationsSingleton(metaclass=Singleton):
             elif DISPLAY_DEPTH and "Depth" in key:
                 display_rgb(image)
 
-            if self.buffers[key]:
+            if self.buffers["_previous_step_reset"]:
                 print(f"Previous action resulted in a reset because of: {self.buffers['_previous_step_reset_reason']}")
 
         # print(f"Got observations: {', '.join([k for k in obj.keys()])}")
