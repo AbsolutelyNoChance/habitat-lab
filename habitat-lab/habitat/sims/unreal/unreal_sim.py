@@ -53,34 +53,6 @@ from enum import Enum
 cv2 = try_cv2_import()
 
 
-# TODO send server message to resize?
-def _resize_observation(obs, observation_space, config):
-    if obs.shape != observation_space.shape:
-        if (
-            config.center_crop is True
-            and obs.shape[0] > observation_space.shape[0]
-            and obs.shape[1] > observation_space.shape[1]
-        ):
-            obs = center_crop(obs, observation_space)
-
-        else:
-            obs = cv2.resize(
-                obs, (observation_space.shape[1], observation_space.shape[0])
-            )
-    return obs
-
-
-# What scale are we using?
-MM_IN_METER = 1000  # millimeters in a meter
-
-
-class UnrealSimActions(Enum):
-    stop = 0
-    move_forward = 1
-    turn_left = 2
-    turn_right = 3
-
-
 @registry.register_sensor
 class UnrealRGBSensor(RGBSensor):
     unreal_buffer_name = "FinalImage"
