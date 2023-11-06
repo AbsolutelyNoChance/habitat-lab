@@ -8,9 +8,12 @@ defaults:
   - _self_
 
 habitat:
+  seed: 101 #not implemented yet
   #env_task: UnrealEnv
   environment:
     max_episode_steps: 500
+  task:
+    spawn_max_dist_to_obj: 10.0
   dataset:
  #   type: PointNav-v1
    data_path: data/datasets/pointnav/unreal-scenes/{split}/dataset.json.gz
@@ -21,6 +24,8 @@ habitat:
       main_agent:
         height: 1.80
         radius: 0.25
+        max_climb: 0.2 #meters
+        max_slope: 25.0 #degrees
         sim_sensors:
           rgb_sensor:
             width: 640
@@ -43,7 +48,8 @@ habitat:
     forward_step_size: 0.25
     turn_angle: 15
     step_physics: False
-    unreal_config:
-      max_slope: 25.0
-      max_step_height: 30.0
+    #no longer needed? keep around in case we need to add a new set of custom settings?
+    #unreal_config:
+    #  max_slope: 25.0
+    #  max_step_height: 30.0
 
