@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: pointnav
   - /habitat/dataset/pointnav: habitat_test
-  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbds_agent
+  - /habitat/simulator/sensor_setups@habitat.simulator.agents.main_agent: rgbd_agent
   - _self_
 
 habitat:
@@ -35,11 +35,11 @@ habitat:
             max_depth: 20.0
             min_depth: 0.0 #always 0.0, don't change
             normalize_depth: True #always True, don't change
-          semantic_sensor:
-            width: 640
-            height: 480
-            type: UnrealSemanticSensor
-            hfov: 90
+          #semantic_sensor:
+          #  width: 640
+          #  height: 480
+          #  type: UnrealSemanticSensor
+          #  hfov: 90
     forward_step_size: 0.25
     turn_angle: 15
     step_physics: False
