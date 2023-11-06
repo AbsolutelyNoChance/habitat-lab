@@ -102,6 +102,9 @@ class ObservationsSingleton(metaclass=Singleton):
                 # Fit habitat's data interface
                 image = np.expand_dims(image, axis=2)
 
+                # image is saved as float64, but the habitat_baselines evaluator crashes, have to convert
+                image = np.float32(image)
+
                 # print(f"Depth has type: {type(image)} and {image.dtype}")
             else:
                 image = cv2.imdecode(image, cv2.IMREAD_ANYCOLOR)
