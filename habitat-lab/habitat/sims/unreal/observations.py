@@ -69,7 +69,7 @@ class ObservationsSingleton(metaclass=Singleton):
                 elif key == "_previous_step_reset_reason":
                     self.buffers[key] = value
                 else:
-                    print("Unknown Observation")
+                    print(f"Unknown Observation {key} = {value}")
                     exit()
                 continue
 
@@ -117,7 +117,9 @@ class ObservationsSingleton(metaclass=Singleton):
 
         # print(f"Got observations: {', '.join([k for k in obj.keys()])}")
         if self.buffers["_previous_step_reset"]:
-                print(f"Previous action resulted in a reset because of: {self.buffers['_previous_step_reset_reason']}")
+            print(
+                f"Previous action resulted in a reset because of: {self.buffers['_previous_step_reset_reason']}"
+            )
 
     def __getattr__(self, name):
         return self.buffers[name]
