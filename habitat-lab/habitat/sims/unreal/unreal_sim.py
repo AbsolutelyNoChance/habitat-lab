@@ -241,9 +241,9 @@ class UnrealSimulator(Simulator):
                 sim_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(sim_sensors)
 
-        self.target_location = loop.run_until_complete(
-            self.client.begin_simulation()
-        )
+        # self.target_location = loop.run_until_complete(
+        #    self.client.begin_simulation()
+        # )
 
         self.reset()
 
