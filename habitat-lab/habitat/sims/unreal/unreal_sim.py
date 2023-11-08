@@ -335,14 +335,31 @@ class UnrealSimulator(Simulator):
         ],
         episode: Optional[Episode] = None,
     ) -> float:
+        # flatten position_b since it's a list of points?
+        position_b = sum(position_b, [])
+
         loop = asyncio.get_event_loop()
         distance = loop.run_until_complete(
             self.client.query_geodesic_distance(position_a, position_b)
         )
 
-        # print(
-        #    f"Computed distance from {position_a} to {position_b} = {distance}"
-        # )
+        if distance < 0:
+            # try again?
+            loop = asyncio.get_event_loop()
+            distance = loop.run_until_complete(
+                self.client.query_geodesic_distance(position_a, position_b)
+            )
+
+        if distance < 0:
+            # if still bad path??
+            print(
+                f"Failed to compute the geodesic distance twice from {position_a} to {position_b}"
+            )
+            exit()
+
+        print(
+            f"Computed distance from {position_a} to {position_b} = {distance}"
+        )
 
         return distance
 
