@@ -101,6 +101,8 @@ class UnrealLink:
         result = await self.__send_packet("begin_sim")
 
         try:
+            # This isn't currently being used, but it makes the simulator
+            # dynamically choose a new target location each episode
             target_location = [float(i) for i in result.split(" ")]
             return target_location
         except Exception as e:

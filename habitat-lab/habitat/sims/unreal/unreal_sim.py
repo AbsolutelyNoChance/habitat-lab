@@ -192,11 +192,11 @@ class UnrealSimulator(Simulator):
         - Sensors to Capture == defined on each agent, RGBDS currently
         """
 
-        print(f"config: {config}")
+        # print(f"config: {config}")
 
         self._config = config
 
-        self.client = UnrealLink()  # HOME "100.75.90.104"
+        self.client = UnrealLink()  # HOME "100.75.90.104" "100.120.227.10"
         self.client.connect_server()
 
         loop = asyncio.get_event_loop()
@@ -246,7 +246,7 @@ class UnrealSimulator(Simulator):
         )
         return observations
         """
-        print("Resetting environment")
+        # print("Resetting environment")
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.client.reset_environment())
 
@@ -324,8 +324,11 @@ class UnrealSimulator(Simulator):
             :py:`False` otherwise
         """
 
-        #TODO define list of possible reasons
-        return Observations["_previous_step_reset"] and Observations["_previous_step_reset_reason"] == "Hit obstacle"
+        # TODO define list of possible reasons
+        return (
+            Observations["_previous_step_reset"]
+            and Observations["_previous_step_reset_reason"] == "Hit obstacle"
+        )
 
     def geodesic_distance(
         self,
@@ -357,9 +360,9 @@ class UnrealSimulator(Simulator):
             )
             exit()
 
-        print(
-            f"Computed distance from {position_a} to {position_b} = {distance}"
-        )
+        # print(
+        #    f"Computed distance from {position_a} to {position_b} = {distance}"
+        # )
 
         return distance
 

@@ -540,6 +540,7 @@ class Success(Measure):
             and task.is_stop_called  # type: ignore
             and distance_to_target < self._success_distance
         ):
+            print(f"Episode Completed Successfully!")
             self._metric = 1.0
         else:
             self._metric = 0.0
@@ -1099,6 +1100,7 @@ class StopAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        print(f"Stopping")
         task.is_stop_called = True  # type: ignore
 
 
