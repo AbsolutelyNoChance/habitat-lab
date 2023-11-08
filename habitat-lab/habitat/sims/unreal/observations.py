@@ -119,7 +119,10 @@ class ObservationsSingleton(metaclass=Singleton):
                 display_rgb(image)
 
         # print(f"Got observations: {', '.join([k for k in obj.keys()])}")
-        if self.buffers["_previous_step_reset"]:
+        if (
+            self.buffers["_previous_step_reset"]
+            and self.buffers["_previous_step_reset_reason"] != "Habitat Reset"
+        ):
             print(
                 f"Previous action resulted in a reset because of: {self.buffers['_previous_step_reset_reason']}"
             )
