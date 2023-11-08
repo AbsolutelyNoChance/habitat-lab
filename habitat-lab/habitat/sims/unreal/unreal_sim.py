@@ -315,8 +315,6 @@ class UnrealSimulator(Simulator):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.client.submit_settings(self._config))
 
-        self.reset()
-
     def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
 
