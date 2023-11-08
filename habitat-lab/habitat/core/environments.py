@@ -126,19 +126,3 @@ class GymHabitatEnv(gym.Wrapper):
         base_env = RLTaskEnv(config=config, dataset=dataset)
         env = HabGymWrapper(env=base_env)
         super().__init__(env)
-
-
-@habitat.registry.register_env(name="UnrealEnv")
-class UnrealEnv(gym.Wrapper):
-    """
-    Unreal Environment wrapper
-    """
-
-    def __init__(
-        self, config: "DictConfig", dataset: Optional[Dataset] = None
-    ):
-        print(f"{config=}")
-        print(f"{dataset=}")
-        base_env = RLTaskEnv(config=config, dataset=dataset)
-        env = HabGymWrapper(env=base_env)
-        super().__init__(env)

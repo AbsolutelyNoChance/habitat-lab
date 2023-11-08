@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   seed: 101 #not implemented yet
-  #env_task: UnrealEnv
   environment:
     max_episode_steps: 500
   task:
