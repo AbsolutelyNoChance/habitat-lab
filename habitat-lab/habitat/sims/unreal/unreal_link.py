@@ -44,7 +44,7 @@ class UnrealLink:
             print(e)
             # instead of failing, ask for new observations,
             # assuming the action was performed?
-            return self.capture_observation()
+            return await self.capture_observation()
 
     async def __send_packet(self, payload):
         self.client.send(payload.encode())
