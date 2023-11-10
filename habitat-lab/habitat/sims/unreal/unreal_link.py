@@ -40,11 +40,11 @@ class UnrealLink:
             # print(f"Received {len(response)} bytes")
 
             return decoded
-        except Exception as e:
-            print(e)
+        except socket.timeout:
+            print("Timed out, trying to recover")
             # instead of failing, ask for new observations,
             # assuming the action was performed?
-            return await self.capture_observation()
+            return await self.__send_packet("capture")
 
     async def __send_packet(self, payload):
         self.client.send(payload.encode())
