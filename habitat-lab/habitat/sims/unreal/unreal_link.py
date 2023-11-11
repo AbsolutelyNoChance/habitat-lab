@@ -102,9 +102,9 @@ class UnrealLink:
             f"begin_sim {' '.join(map(str, start_location))} {' '.join(map(str, start_rotation))}"
         )
 
-        print(
-            f"changing episode to {' '.join(map(str, start_location))} {' '.join(map(str, start_rotation))}"
-        )
+        # print(
+        #    f"changing episode to {' '.join(map(str, start_location))} {' '.join(map(str, start_rotation))}"
+        # )
 
         if result == "OK":
             pass
