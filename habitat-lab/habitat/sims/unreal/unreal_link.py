@@ -94,19 +94,24 @@ class UnrealLink:
             print(f"Sent the payload: {settings}")
             exit()
 
-    async def begin_simulation(self):
+    async def begin_simulation(self, start_location, start_rotation):
         # TODO error check? make new json field to detect errors or stop?
         print(f"Beginning the simulation")
 
-        result = await self.__send_packet("begin_sim")
+        result = await self.__send_packet(
+            f"begin_sim {' '.join(map(str, start_location))} {' '.join(map(str, start_rotation))}"
+        )
 
-        try:
-            # This isn't currently being used, but it makes the simulator
-            # dynamically choose a new target location each episode
-            target_location = [float(i) for i in result.split(" ")]
-            return target_location
-        except Exception as e:
-            print(f"Unreal server didn't start the simulation! {result}")
+        print(
+            f"changing episode to {' '.join(map(str, start_location))} {' '.join(map(str, start_rotation))}"
+        )
+
+        if result == "OK":
+            pass
+        else:
+            print(
+                f"Unreal server didn't accept the start location/rotations! {result}"
+            )
             exit()
 
     async def query_geodesic_distance(self, point_a, point_b):

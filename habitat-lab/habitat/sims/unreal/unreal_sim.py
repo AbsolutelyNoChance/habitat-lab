@@ -315,6 +315,13 @@ class UnrealSimulator(Simulator):
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.client.submit_settings(self._config))
 
+        if ep_info is not None:
+            self.target_location = loop.run_until_complete(
+                self.client.begin_simulation(
+                    ep_info.start_position, ep_info.start_rotation
+                )
+            )
+
     def previous_step_collided(self) -> bool:
         r"""Whether or not the previous step resulted in a collision
 
