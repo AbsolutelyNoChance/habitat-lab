@@ -11,8 +11,6 @@ habitat:
   seed: 101 #not implemented yet
   environment:
     max_episode_steps: 500
-  task:
-    spawn_max_dist_to_obj: 10.0
   dataset:
  #   type: PointNav-v1
    data_path: data/datasets/pointnav/unreal-scenes/{split}/dataset.json.gz
