@@ -220,10 +220,7 @@ class UnrealSimulator(Simulator):
         # )
 
         # to keep track of DistanceClosestObstacle
-        self.file = open("dco.csv", "w", newline="")
-        self.dco_writer = csv.writer(
-            self.file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL
-        )
+        self.dco_list: List[float] = []
 
         self.reset()
 
@@ -254,6 +251,20 @@ class UnrealSimulator(Simulator):
         )
         return observations
         """
+
+        # TODO only count data that has more than x moves?
+        # TODO do we count turns? I guess it's more time spent in potentially dangerous areas?
+        # TODO only count if episodes are successful?
+        # TODO eval dataset different than training dataset
+        if len(self.dco_list) > 0:
+            with open("dco.csv", "a") as file:
+                # print(f"saved {''.join(str(self.dco_list))}")
+
+                writer = csv.writer(file)
+                writer.writerow(self.dco_list)
+
+                self.dco_list = []
+
         # print("Resetting environment")
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.client.reset_environment())
@@ -274,10 +285,11 @@ class UnrealSimulator(Simulator):
         else:
             loop.run_until_complete(self.client.execute_action(action))
 
-        dco = self.distance_to_closest_obstacle(
-            self.get_agent_state().position, 200
-        )  # meters
-        self.dco_writer.writerow(dco)
+            dco = self.distance_to_closest_obstacle(
+                self.get_agent_state().position, 200
+            )  # meters
+            # print(f"computed dco: {dco}")
+            self.dco_list.append(dco)
 
         return self._sensor_suite.get_observations(link=self.client)
 
