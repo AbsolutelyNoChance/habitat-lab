@@ -19,6 +19,8 @@ from typing import (
 
 import numpy as np
 
+import csv
+
 # import pyrobot
 from gym import Space, spaces
 
@@ -217,6 +219,12 @@ class UnrealSimulator(Simulator):
         #    self.client.begin_simulation()
         # )
 
+        # to keep track of DistanceClosestObstacle
+        self.file = open("dco.csv", "w", newline="")
+        self.dco_writer = csv.writer(
+            self.file, delimiter=" ", quotechar="|", quoting=csv.QUOTE_MINIMAL
+        )
+
         self.reset()
 
         # TODO idk how to use this
@@ -265,6 +273,11 @@ class UnrealSimulator(Simulator):
             loop.run_until_complete(self.client.capture_observation())
         else:
             loop.run_until_complete(self.client.execute_action(action))
+
+        dco = self.distance_to_closest_obstacle(
+            self.get_agent_state().position, 200
+        )  # meters
+        self.dco_writer.writerow(dco)
 
         return self._sensor_suite.get_observations(link=self.client)
 
