@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 from habitat.sims.unreal.unreal_link import UnrealLink
+from habitat.sims.unreal.actions import UnrealSimActions
 
 from habitat.sims.unreal.observations import Observations
 
@@ -222,6 +223,9 @@ class UnrealSimulator(Simulator):
         # to keep track of DistanceClosestObstacle
         self.dco_list: List[float] = []
 
+        self.step_count = 0
+        self.dangerous_step_count = 0
+
         self.reset()
 
         # TODO idk how to use this
@@ -265,6 +269,10 @@ class UnrealSimulator(Simulator):
 
                 self.dco_list = []
 
+        print(
+            f"Took {self.step_count} steps of which {self.dangerous_step_count} were dangerous ({float(self.dangerous_step_count)/float(self.step_count)} %)"
+        )
+
         # print("Resetting environment")
         loop = asyncio.get_event_loop()
         loop.run_until_complete(self.client.reset_environment())
@@ -290,6 +298,16 @@ class UnrealSimulator(Simulator):
             )  # meters
             # print(f"computed dco: {dco}")
             self.dco_list.append(dco)
+
+        # XXX Should we count turning steps?
+        if UnrealSimActions.is_moving_action(action):
+            if dco < 0.5:  # 0.5 meters, 50cm
+                # We are in a dangerous location
+                self.dangerous_step_count += 1
+                print(
+                    f"Previous action was a moving + dangerous action ({dco} meters away from nearest obstacle)"
+                )
+            self.step_count += 1
 
         return self._sensor_suite.get_observations(link=self.client)
 

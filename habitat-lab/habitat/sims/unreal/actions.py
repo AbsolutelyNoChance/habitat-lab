@@ -61,6 +61,17 @@ class UnrealSimActionsSingleton(metaclass=Singleton):
 
         return name in self._known_actions
 
+    def is_moving_action(self, action) -> bool:
+        r"""Checks if the given action leads to character movement.
+        Moving actions: move_forward
+        Non-moving: turn_left, turn_right
+        """
+        action_string = self.get_unreal_action(action)
+        if action_string == "move_forward":
+            return True
+        else:
+            return False
+
     def __getattr__(self, name):
         return self._known_actions[name]
 
