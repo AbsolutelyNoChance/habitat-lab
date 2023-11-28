@@ -305,9 +305,9 @@ class UnrealSimulator(Simulator):
             if dco < 0.5:  # 0.5 meters, 50cm
                 # We are in a dangerous location
                 self.dangerous_step_count += 1
-                print(
-                    f"Previous action was a moving + dangerous action ({dco} meters away from nearest obstacle)"
-                )
+                # print(
+                #    f"Previous action was a moving + dangerous action ({dco} meters away from nearest obstacle)"
+                # )
             self.step_count += 1
 
         return self._sensor_suite.get_observations(link=self.client)
