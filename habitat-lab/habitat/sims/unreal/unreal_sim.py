@@ -269,9 +269,10 @@ class UnrealSimulator(Simulator):
 
                 self.dco_list = []
 
-        print(
-            f"Took {self.step_count} steps of which {self.dangerous_step_count} were dangerous ({float(self.dangerous_step_count)/float(self.step_count)} %)"
-        )
+        if self.step_count > 0:
+            print(
+                f"Took {self.step_count} steps of which {self.dangerous_step_count} were dangerous ({float(self.dangerous_step_count)/float(self.step_count)} %)"
+            )
 
         # print("Resetting environment")
         loop = asyncio.get_event_loop()
