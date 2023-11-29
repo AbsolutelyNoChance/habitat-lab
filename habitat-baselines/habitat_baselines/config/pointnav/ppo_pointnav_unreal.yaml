@@ -21,7 +21,7 @@ habitat_baselines:
   checkpoint_folder: "data/unreal_checkpoints"
   num_updates: -1
   log_interval: 25
-  total_num_steps: 75e4
+  total_num_steps: 2e6
   num_checkpoints: 100
   # Force PyTorch to be single threaded as
   # this improves performance considerably
@@ -50,7 +50,7 @@ habitat_baselines:
       tau: 0.95
       use_linear_clip_decay: True
       use_linear_lr_decay: True
-      reward_window_size: 50
+      reward_window_size: 10
 
       # Use double buffered sampling, typically helps
       # when environment time is similar or larger than
