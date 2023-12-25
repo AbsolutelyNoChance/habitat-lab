@@ -224,7 +224,9 @@ class UnrealSimulator(Simulator):
         self.dco_list: List[float] = []
 
         self.step_count = 0
-        self.dangerous_step_count = 0
+        self.dangerous1_step_count = 0
+        self.dangerous2_step_count = 0
+        self.dangerous3_step_count = 0
 
         self.reset()
 
@@ -271,7 +273,13 @@ class UnrealSimulator(Simulator):
 
         if self.step_count > 0:
             print(
-                f"Took {self.step_count} steps of which {self.dangerous_step_count} were dangerous ({100.0 * float(self.dangerous_step_count)/float(self.step_count)} %)"
+                f"Took {self.step_count} steps of which {self.dangerous1_step_count} were dangerous (<50cm) ({100.0 * float(self.dangerous1_step_count)/float(self.step_count)} %)"
+            )
+            print(
+                f"Took {self.step_count} steps of which {self.dangerous2_step_count} were dangerous (<25cm) ({100.0 * float(self.dangerous2_step_count)/float(self.step_count)} %)"
+            )
+            print(
+                f"Took {self.step_count} steps of which {self.dangerous3_step_count} were dangerous (<12.5cm) ({100.0 * float(self.dangerous3_step_count)/float(self.step_count)} %)"
             )
 
         # print("Resetting environment")
@@ -304,10 +312,13 @@ class UnrealSimulator(Simulator):
         if UnrealSimActions.is_moving_action(action):
             if dco < 0.5:  # 0.5 meters, 50cm
                 # We are in a dangerous location
-                self.dangerous_step_count += 1
-                # print(
-                #    f"Previous action was a moving + dangerous action ({dco} meters away from nearest obstacle)"
-                # )
+                self.dangerous1_step_count += 1
+            if dco < 0.25:  # 0.25 meters, 25cm
+                # We are in a warning location
+                self.dangerous2_step_count += 1
+            if dco < 0.125:  # 0.125 meters, 12.5cm
+                # We are in a warning location
+                self.dangerous3_step_count += 1
             self.step_count += 1
 
         return self._sensor_suite.get_observations(link=self.client)
